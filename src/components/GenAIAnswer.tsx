@@ -10,6 +10,7 @@ export default function GenAIAnswer() {
   const { state } = useCoveoController(genAnswer);
 
   if (!state.isVisible) return null;
+  if (!state.answer && !state.isStreaming) return null;
 
   return (
     <div className="mb-6 bg-gradient-to-r from-indigo-950/50 to-purple-950/50 border border-indigo-500/20 rounded-xl p-6">
