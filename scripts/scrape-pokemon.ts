@@ -105,7 +105,7 @@ async function scrapePokemon(relativeUrl: string): Promise<PokemonData | null> {
 
     const imageUrl = $('meta[property="og:image"]').attr("content") || "";
 
-    // Species, Height, Weight, Abilities — all from the first vitals table
+    // Species, Height, Weight, Abilities - all from the first vitals table
     let species = "", height = "", weight = "";
     const abilities: string[] = [];
 

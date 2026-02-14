@@ -1,5 +1,4 @@
-// Type -> Tailwind color mapping
-// Tailwind needs full class names (no dynamic string concat), so we list them all
+// Tailwind needs full class names, can't do dynamic concat like `bg-${color}-500`
 export const typeColors: Record<string, string> = {
   Normal: "bg-gray-400", Fire: "bg-orange-500", Water: "bg-blue-500",
   Electric: "bg-yellow-400", Grass: "bg-green-500", Ice: "bg-cyan-300",
