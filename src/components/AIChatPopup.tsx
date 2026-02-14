@@ -11,6 +11,7 @@ import {
 } from "@coveo/headless";
 import { coveoConfig } from "@/lib/coveo-config";
 import { typeColors } from "@/lib/pokemon-utils";
+import { retrievePassages, Passage } from "@/lib/passage-retrieval";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -21,6 +22,7 @@ interface ChatMessage {
     types: string[];
     number: number;
   }[];
+  passages?: Passage[];
   isStreaming?: boolean;
 }
 
@@ -29,7 +31,7 @@ export default function AIChatPopup() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: "Hey! I'm your Pokedex AI assistant. Ask me anything about Pokemon! For example:\n\n• \"Which Pokemon are Dragon type?\"\n• \"Tell me about Pikachu\"\n• \"What are the strongest fire Pokemon?\"",
+      content: "Hey! I'm your Pokedex AI assistant. Ask me anything about Pokemon!\n\n• \"Which Pokemon are Dragon type?\"\n• \"Tell me about Pikachu\"\n• \"What are the strongest fire Pokemon?\"",
     },
   ]);
   const [input, setInput] = useState("");
@@ -66,7 +68,7 @@ export default function AIChatPopup() {
     setMessages((prev) => [...prev, { role: "assistant", content: "", isStreaming: true }]);
 
     try {
-      // Separate engine so chat queries don't mess with the main search state
+      // Separate engine so chat queries don't affect the main search
       const engine = buildSearchEngine({
         configuration: {
           organizationId: coveoConfig.organizationId,
@@ -89,6 +91,9 @@ export default function AIChatPopup() {
 
       engine.dispatch(updateQuery({ q: query }));
       engine.dispatch(executeSearch(logSearchFromLink()));
+
+      // Fire passage retrieval in parallel with the search
+      const passagePromise = retrievePassages(query);
 
       let genAIAnswer = "";
       let searchDone = false;
@@ -132,6 +137,8 @@ export default function AIChatPopup() {
         setTimeout(done, 12000);
       });
 
+      const passages = await passagePromise;
+
       const pokemonResults = resultList.state.results.slice(0, 4).map((r) => {
         const raw = r.raw as Record<string, unknown>;
         return {
@@ -142,7 +149,18 @@ export default function AIChatPopup() {
         };
       });
 
-      const finalAnswer = genAIAnswer || buildFallbackAnswer(query, pokemonResults);
+      // If RGA answered, use that. Otherwise, build an answer from passages.
+      let finalAnswer: string;
+      let finalPassages: Passage[] | undefined;
+
+      if (genAIAnswer) {
+        finalAnswer = genAIAnswer;
+      } else if (passages.length > 0) {
+        finalAnswer = buildPassageAnswer(query, passages);
+        finalPassages = passages;
+      } else {
+        finalAnswer = buildFallbackAnswer(query, pokemonResults);
+      }
 
       setMessages((prev) => {
         const updated = [...prev];
@@ -150,6 +168,7 @@ export default function AIChatPopup() {
         if (last.isStreaming || last.role === "assistant") {
           last.content = finalAnswer;
           last.pokemonResults = pokemonResults.length > 0 ? pokemonResults : undefined;
+          last.passages = finalPassages;
           last.isStreaming = false;
         }
         return [...updated];
@@ -200,7 +219,7 @@ export default function AIChatPopup() {
             </div>
             <div>
               <h3 className="text-white font-bold text-sm">Pokedex AI</h3>
-              <p className="text-red-100 text-xs">Ask me about any Pokemon</p>
+              <p className="text-red-100 text-xs">Powered by Coveo RGA + Passage Retrieval</p>
             </div>
             <div className="ml-auto flex items-center gap-1">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
@@ -237,6 +256,21 @@ export default function AIChatPopup() {
                       <span className="whitespace-pre-line">{msg.content}</span>
                     )}
                   </div>
+
+                  {msg.passages && msg.passages.length > 0 && (
+                    <div className="mt-2 space-y-1.5">
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide px-1">Sources (Passage Retrieval API)</p>
+                      {msg.passages.map((p, j) => (
+                        <div key={j} className="bg-white rounded-lg border border-blue-200 p-2.5 text-xs">
+                          <p className="text-slate-600 leading-relaxed italic">{"“"}{p.text.slice(0, 150)}{p.text.length > 150 ? "..." : ""}{"”"}</p>
+                          <div className="flex items-center justify-between mt-1.5">
+                            <span className="text-blue-600 font-medium">{p.document.title}</span>
+                            <span className="text-slate-400">{Math.round(p.relevanceScore * 100)}% match</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {msg.pokemonResults && msg.pokemonResults.length > 0 && (
                     <div className="mt-2 grid grid-cols-2 gap-2">
@@ -306,17 +340,23 @@ export default function AIChatPopup() {
   );
 }
 
+function buildPassageAnswer(query: string, passages: Passage[]): string {
+  const topPassage = passages[0];
+  const source = topPassage.document.title;
+  return `Based on what I found about "${query}":\n\n${topPassage.text}\n\n(from ${source})`;
+}
+
 function buildFallbackAnswer(
   query: string,
   results: { title: string; types: string[]; number: number }[]
 ): string {
   if (results.length === 0) {
-    return "I couldn't find any Pokemon matching your query. Try a specific name or type!";
+    return "I couldn't find any Pokemon matching that. Try a specific name or type!";
   }
   const names = results.map((r) => r.title);
   if (results.length === 1) {
     const p = results[0];
-    return `I found ${p.title} (#${p.number})! It's a ${p.types.join("/")} type Pokemon. Click on the card below for more details.`;
+    return `I found ${p.title} (#${p.number}), a ${p.types.join("/")} type. Click the card below for details.`;
   }
-  return `Here's what I found for "${query}": ${names.join(", ")}${results.length >= 4 ? " and more" : ""}. Click on any card below for details!`;
+  return `Here's what I found for "${query}": ${names.join(", ")}${results.length >= 4 ? " and more" : ""}. Click any card for details.`;
 }

@@ -9,11 +9,11 @@ I went with Headless over Atomic because I wanted full control over the UI. The 
 - Full-text search across 1025 Pokemon with Coveo ranking
 - Facets for Type and Generation
 - Pokemon cards with official artwork
-- AI-generated answers (Coveo RGA) inline + a floating AI chat popup
+- AI-generated answers (Coveo RGA) inline on the search page
+- Floating AI chat popup powered by RGA + Passage Retrieval as fallback
 - Query suggestions / type-ahead
 - Detail pages with base stats, abilities, height/weight
-- Passage Retrieval API on detail pages (bonus)
-- Sort by relevance or Pokedex number
+- Passage Retrieval API on detail pages and in the chat
 - Responsive layout (mobile + desktop)
 
 ## Stack
@@ -75,7 +75,7 @@ The push script (`scripts/push-to-coveo.ts`) takes the scraped JSON and sends ea
 
 On the frontend, each Coveo Headless controller (search box, facets, result list, etc.) is wired up through a `useCoveoController` hook that handles subscribe/unsubscribe. The detail page spins up its own engine instance to query one Pokemon without touching the main search state.
 
-There is also a floating AI chat popup (bottom-right corner) that creates a dedicated engine per conversation query, runs it through Coveo RGA, and shows the generated answer with clickable Pokemon cards inline.
+The floating AI chat (bottom-right) creates a dedicated engine per query. It tries three things in order: Coveo RGA for a generated answer, then Passage Retrieval for sourced quotes, then a basic fallback from search results. Passages show up as cited sources under the answer, so the user can see exactly where the information came from.
 
 ## What I learned about Coveo
 
@@ -93,15 +93,20 @@ I made a `useCoveoController` hook to avoid duplicating the subscribe/unsubscrib
 
 ### RGA (Relevance Generative Answering)
 
-This is Coveo's GenAI answer feature. You create an RGA model and a Semantic Encoder in the admin, associate both to your query pipeline, and on the frontend you call `buildGeneratedAnswer`. It streams the answer and shows citations.
+Coveo's GenAI answer feature. You create an RGA model and a Semantic Encoder in the admin, associate both to your query pipeline, and call `buildGeneratedAnswer` on the frontend. It streams the answer and shows citations.
 
-I use it in two places: inline on the search page (the blue box that appears when Coveo has a generated answer), and in the floating AI chat popup where it powers the conversational responses.
+I use it in two places: inline on the search page (the blue box that appears after a query), and in the floating AI chat where it powers the conversational responses.
 
 ### Passage Retrieval API
 
-The bonus item. Instead of returning full documents, this API returns the specific text chunks that match a query. Headless doesn't have a controller for it, so I called the REST endpoint directly (`/rest/search/v3/passages/retrieve`).
+Instead of returning full documents, this API returns the specific text chunks that answer a query. Headless doesn't have a controller for it, so I called the REST endpoint directly (`/rest/search/v3/passages/retrieve`).
 
-I used it on the detail page to surface relevant passages about each Pokemon. Where I think this really shines is for customers with large documentation or knowledge bases. When someone asks a question, you get the exact paragraph instead of a link to a 50-page PDF. That's a much better experience for support portals, internal wikis, or any self-service scenario.
+I used it in two places:
+
+1. On the detail page to surface relevant passages about each Pokemon.
+2. In the AI chat as a fallback when RGA doesn't return a generated answer. Instead of a generic "here are some results", the chat shows the actual passage text with a source citation. It's basically a lightweight RAG pipeline: query -> passage retrieval -> format as answer with sources.
+
+**Where I'd use this with a real customer:** imagine a B2B company like Schneider Electric with thousands of technical product datasheets across multiple languages. A field engineer on-site needs to know the exact wiring spec for a specific circuit breaker model. With traditional search, they get a link to a 200-page PDF. With Passage Retrieval, they get the exact paragraph: "The Compact NSXm 36 kA requires 2.5mm2 copper conductors, torque 2.5 N.m". That's the difference between 15 seconds and 15 minutes. You could integrate this into their existing Salesforce Service Cloud portal, their mobile field app, or even a WhatsApp bot for technicians. The same pattern works for pharma (drug interaction lookups), legal (clause extraction from contracts), or any industry where people search through dense documentation daily.
 
 ### Query pipelines
 
@@ -110,4 +115,4 @@ This is where everything comes together on the Coveo side. The ML models (RGA, Q
 ## Known limitations
 
 - Passage Retrieval requires a CPR model configured in the admin console
-- The detail page creates a new engine instance per visit (keeps it simple but not ideal for production)
+- The detail page creates a new engine instance per visit (simple but not ideal at scale)

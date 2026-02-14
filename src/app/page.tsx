@@ -8,7 +8,6 @@ import ResultList from "@/components/ResultList";
 import Facet from "@/components/Facet";
 import Pager from "@/components/Pager";
 import GenAIAnswer from "@/components/GenAIAnswer";
-import Sort from "@/components/Sort";
 import MobileFacets from "@/components/MobileFacets";
 import AIChatPopup from "@/components/AIChatPopup";
 
@@ -71,7 +70,6 @@ export default function Home() {
           <div className="flex-1 min-w-0">
             <MobileFacets />
             <GenAIAnswer />
-            <Sort />
             <ResultList />
             <Pager />
           </div>
