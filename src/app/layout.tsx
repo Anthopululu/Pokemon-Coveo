@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Pokedex Search - Powered by Coveo",
   description:
-    "Search and explore Pokemon with Coveo-powered intelligent search",
+    "Pokemon search app powered by Coveo",
 };
 
 export default function RootLayout({
