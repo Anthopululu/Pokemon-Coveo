@@ -12,6 +12,7 @@ import {
 } from "@coveo/headless";
 import { coveoConfig } from "@/lib/coveo-config";
 import { typeColors, typeBgGradients } from "@/lib/pokemon-utils";
+import PassageHighlights from "@/components/PassageHighlights";
 
 interface PokemonData {
   title: string;
@@ -195,6 +196,8 @@ export default function PokemonDetailPage() {
                   <p className="text-gray-600 leading-relaxed">{pokemon.excerpt}</p>
                 </div>
               )}
+
+              <PassageHighlights pokemonName={pokemon.title} />
             </div>
 
             {Object.keys(pokemon.stats).length > 0 && (
