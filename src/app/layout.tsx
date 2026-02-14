@@ -3,8 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Pokedex Search - Powered by Coveo",
-  description:
-    "Pokemon search app powered by Coveo",
+  description: "Pokemon search app powered by Coveo",
 };
 
 export default function RootLayout({
@@ -14,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 min-h-screen">{children}</body>
+      <body className="min-h-screen bg-slate-50">{children}</body>
     </html>
   );
 }
