@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSearchEngine } from "@/lib/coveo-engine";
+import { loadSearchActions, loadSearchAnalyticsActions } from "@coveo/headless";
 import SearchBox from "@/components/SearchBox";
 import ResultList from "@/components/ResultList";
 import Facet from "@/components/Facet";
@@ -9,6 +10,7 @@ import Pager from "@/components/Pager";
 import GenAIAnswer from "@/components/GenAIAnswer";
 import Sort from "@/components/Sort";
 import MobileFacets from "@/components/MobileFacets";
+import AIChatPopup from "@/components/AIChatPopup";
 
 export default function Home() {
   const [ready, setReady] = useState(false);
@@ -16,7 +18,13 @@ export default function Home() {
   useEffect(() => { setReady(true); }, []);
 
   useEffect(() => {
-    if (ready) getSearchEngine().executeFirstSearch();
+    if (ready) {
+      const engine = getSearchEngine();
+      // Force search on every mount so facets reload after back-navigation
+      const { executeSearch } = loadSearchActions(engine);
+      const { logInterfaceLoad } = loadSearchAnalyticsActions(engine);
+      engine.dispatch(executeSearch(logInterfaceLoad()));
+    }
   }, [ready]);
 
   if (!ready) {
@@ -75,6 +83,8 @@ export default function Home() {
           Pokemon data from pokemondb.net &middot; Search powered by Coveo
         </div>
       </footer>
+
+      <AIChatPopup />
     </div>
   );
 }
