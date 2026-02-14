@@ -111,8 +111,3 @@ I used it in two places:
 ### Query pipelines
 
 This is where everything comes together on the Coveo side. The ML models (RGA, Query Suggestions, Semantic Encoder) are all associated to a pipeline, and the frontend connects to it via the `searchHub`. I only used one pipeline here but you'd set up different ones for different contexts (internal search vs customer-facing, etc.).
-
-## Known limitations
-
-- Passage Retrieval requires a CPR model configured in the admin console
-- The detail page creates a new engine instance per visit (simple but not ideal at scale)
