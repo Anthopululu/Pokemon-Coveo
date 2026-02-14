@@ -38,7 +38,7 @@ export default function SearchBox() {
     <div className="relative w-full max-w-2xl">
       <form onSubmit={onSubmit}>
         <div className="relative">
-          <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -47,25 +47,24 @@ export default function SearchBox() {
             onChange={onChange}
             onFocus={() => controller.showSuggestions()}
             placeholder="Search Pokemon by name, type, ability..."
-            className="w-full pl-14 pr-28 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:border-white/40 focus:bg-white/15 focus:outline-none text-white placeholder-red-200/50 text-lg transition-all"
+            className="w-full pl-12 pr-24 py-3.5 bg-white border-2 border-transparent rounded-xl focus:border-red-300 focus:ring-4 focus:ring-red-100 focus:outline-none text-slate-900 placeholder-slate-400 text-base shadow-sm transition-all"
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white text-red-600 px-6 py-2.5 rounded-xl hover:bg-red-50 transition-colors font-semibold text-sm"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 active:scale-95 transition-all font-medium text-sm"
           >
             Search
           </button>
         </div>
       </form>
 
-      {/* TODO: close suggestions on click outside */}
       {state.suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+        <ul className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden divide-y divide-slate-100">
           {state.suggestions.map((suggestion, i) => (
             <li
               key={i}
               onClick={() => pickSuggestion(suggestion)}
-              className="px-6 py-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0 text-slate-200 [&_strong]:text-red-400 [&_strong]:font-semibold"
+              className="px-5 py-3 hover:bg-red-50 cursor-pointer text-slate-700 [&_strong]:text-red-600 [&_strong]:font-semibold transition-colors"
               dangerouslySetInnerHTML={{ __html: suggestion.highlightedValue }}
             />
           ))}

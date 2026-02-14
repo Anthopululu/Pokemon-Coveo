@@ -19,7 +19,7 @@ export default function Pager() {
       <button
         onClick={() => pager.previousPage()}
         disabled={!state.hasPreviousPage}
-        className="px-3 py-2 text-sm rounded-lg border border-slate-700 text-slate-300 disabled:opacity-30 hover:bg-slate-800 transition-colors"
+        className="px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors"
       >
         Previous
       </button>
@@ -29,8 +29,8 @@ export default function Pager() {
           onClick={() => pager.selectPage(page)}
           className={`px-3 py-2 text-sm rounded-lg transition-colors ${
             pager.isCurrentPage(page)
-              ? "bg-red-600 text-white"
-              : "border border-slate-700 text-slate-300 hover:bg-slate-800"
+              ? "bg-red-600 text-white shadow-sm"
+              : "border border-slate-200 text-slate-600 hover:bg-slate-50"
           }`}
         >
           {page}
@@ -39,7 +39,7 @@ export default function Pager() {
       <button
         onClick={() => pager.nextPage()}
         disabled={!state.hasNextPage}
-        className="px-3 py-2 text-sm rounded-lg border border-slate-700 text-slate-300 disabled:opacity-30 hover:bg-slate-800 transition-colors"
+        className="px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors"
       >
         Next
       </button>

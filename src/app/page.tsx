@@ -13,41 +13,37 @@ import MobileFacets from "@/components/MobileFacets";
 export default function Home() {
   const [ready, setReady] = useState(false);
 
-  // Mount components first so facets register with the engine
   useEffect(() => { setReady(true); }, []);
 
-  // Then execute the first search after controllers are created
   useEffect(() => {
     if (ready) getSearchEngine().executeFirstSearch();
   }, [ready]);
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400 text-lg">Loading Pokedex...</p>
+          <p className="text-slate-500 text-lg">Loading Pokedex...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-700 via-red-600 to-red-800" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]" />
-        <div className="relative max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-400 to-red-600 border-2 border-slate-800 relative">
-                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-slate-800" />
-                <div className="absolute w-2.5 h-2.5 bg-white rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-800" />
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-gradient-to-r from-red-600 to-red-500 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow">
+              <div className="w-6 h-6 rounded-full bg-red-500 border-2 border-slate-700 relative">
+                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-slate-700" />
+                <div className="absolute w-2 h-2 bg-white rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border border-slate-700" />
               </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">Pokedex</h1>
-              <p className="text-red-200 text-sm">Powered by Coveo</p>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Pokedex</h1>
+              <p className="text-red-100 text-xs">Powered by Coveo</p>
             </div>
           </div>
           <SearchBox />
@@ -56,8 +52,9 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex gap-8">
-          <aside className="w-64 flex-shrink-0 hidden md:block">
-            <div className="sticky top-8 bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-5">
+          <aside className="w-60 flex-shrink-0 hidden lg:block">
+            <div className="sticky top-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-5 pb-3 border-b border-slate-100">Filters</h2>
               <Facet field="pokemontype" title="Type" />
               <Facet field="pokemongeneration" title="Generation" />
             </div>
@@ -73,9 +70,9 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="border-t border-slate-800 mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-slate-500">
-          Pokemon data sourced from pokemondb.net &middot; Search powered by Coveo
+      <footer className="border-t border-slate-200 mt-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-slate-400">
+          Pokemon data from pokemondb.net &middot; Search powered by Coveo
         </div>
       </footer>
     </div>
