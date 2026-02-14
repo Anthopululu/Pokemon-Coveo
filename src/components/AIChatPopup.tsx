@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   buildSearchEngine,
   buildResultList,
-  buildGeneratedAnswer,
   loadSearchActions,
   loadQueryActions,
   loadSearchAnalyticsActions,
@@ -21,6 +20,7 @@ interface ChatMessage {
     image: string;
     types: string[];
     number: number;
+    species: string;
   }[];
   passages?: Passage[];
   isStreaming?: boolean;
@@ -31,7 +31,7 @@ export default function AIChatPopup() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: "Hey! I'm your Pokedex AI assistant. Ask me anything about Pokemon!\n\n• \"Which Pokemon are Dragon type?\"\n• \"Tell me about Pikachu\"\n• \"What are the strongest fire Pokemon?\"",
+      content: "Hey! I'm your Pokedex AI assistant. Ask me anything about Pokemon!\n\n\u2022 \"Which Pokemon are Dragon type?\"\n\u2022 \"Tell me about Pikachu\"\n\u2022 \"What are the strongest fire Pokemon?\"",
     },
   ]);
   const [input, setInput] = useState("");
@@ -68,7 +68,6 @@ export default function AIChatPopup() {
     setMessages((prev) => [...prev, { role: "assistant", content: "", isStreaming: true }]);
 
     try {
-      // Separate engine so chat queries don't affect the main search
       const engine = buildSearchEngine({
         configuration: {
           organizationId: coveoConfig.organizationId,
@@ -83,8 +82,6 @@ export default function AIChatPopup() {
         },
       });
 
-      const genAnswer = buildGeneratedAnswer(engine);
-
       const { updateQuery } = loadQueryActions(engine);
       const { executeSearch } = loadSearchActions(engine);
       const { logSearchFromLink } = loadSearchAnalyticsActions(engine);
@@ -92,49 +89,16 @@ export default function AIChatPopup() {
       engine.dispatch(updateQuery({ q: query }));
       engine.dispatch(executeSearch(logSearchFromLink()));
 
-      // Fire passage retrieval in parallel with the search
       const passagePromise = retrievePassages(query);
 
-      let genAIAnswer = "";
-      let searchDone = false;
-      let genAIDone = false;
-      let streamInterval: ReturnType<typeof setInterval>;
-
       await new Promise<void>((resolve) => {
-        streamInterval = setInterval(() => {
-          if (genAnswer.state.answer) {
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.isStreaming) last.content = genAnswer.state.answer || "";
-              return [...updated];
-            });
-          }
-        }, 100);
-
-        const done = () => {
-          clearInterval(streamInterval);
-          unsubResult();
-          unsubGen();
-          resolve();
-        };
-
-        const unsubResult = resultList.subscribe(() => {
+        const unsub = resultList.subscribe(() => {
           if (!resultList.state.isLoading) {
-            searchDone = true;
-            if (genAIDone) done();
+            unsub();
+            resolve();
           }
         });
-
-        const unsubGen = genAnswer.subscribe(() => {
-          if (!genAnswer.state.isStreaming) {
-            genAIAnswer = genAnswer.state.answer || "";
-            genAIDone = true;
-            if (searchDone) done();
-          }
-        });
-
-        setTimeout(done, 12000);
+        setTimeout(() => { unsub(); resolve(); }, 8000);
       });
 
       const passages = await passagePromise;
@@ -146,19 +110,65 @@ export default function AIChatPopup() {
           image: (raw.pokemonimage as string) || "",
           types: (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[],
           number: (raw.pokemonnumber as number) || 0,
+          species: (raw.pokemonspecies as string) || "",
         };
       });
 
-      // If RGA answered, use that. Otherwise, build an answer from passages.
-      let finalAnswer: string;
-      let finalPassages: Passage[] | undefined;
+      const contextParts: string[] = [];
+      for (const p of pokemonResults) {
+        contextParts.push(`- ${p.title} (#${p.number}): ${p.types.join("/")} type. Species: ${p.species || "Unknown"}.`);
+      }
+      for (const r of resultList.state.results.slice(0, 4)) {
+        if (r.excerpt) {
+          contextParts.push(`[${r.title}]: ${r.excerpt}`);
+        }
+      }
+      if (passages.length > 0) {
+        contextParts.push("\nPassage retrieval results:");
+        for (const p of passages) {
+          contextParts.push(`[${p.document.title}]: ${p.text}`);
+        }
+      }
+      const context = contextParts.join("\n");
 
-      if (genAIAnswer) {
-        finalAnswer = genAIAnswer;
-      } else if (passages.length > 0) {
-        finalAnswer = buildPassageAnswer(query, passages);
-        finalPassages = passages;
-      } else {
+      let finalAnswer = "";
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, context }),
+        });
+
+        if (res.ok && res.body) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data: ") && line !== "data: [DONE]") {
+                try {
+                  const parsed = JSON.parse(line.slice(6));
+                  const token = parsed.choices?.[0]?.delta?.content || "";
+                  finalAnswer += token;
+                  setMessages((prev) => {
+                    const updated = [...prev];
+                    const last = updated[updated.length - 1];
+                    if (last.isStreaming) last.content = finalAnswer;
+                    return [...updated];
+                  });
+                } catch {}
+              }
+            }
+          }
+        }
+      } catch {}
+
+      if (!finalAnswer) {
         finalAnswer = buildFallbackAnswer(query, pokemonResults);
       }
 
@@ -168,7 +178,6 @@ export default function AIChatPopup() {
         if (last.isStreaming || last.role === "assistant") {
           last.content = finalAnswer;
           last.pokemonResults = pokemonResults.length > 0 ? pokemonResults : undefined;
-          last.passages = finalPassages;
           last.isStreaming = false;
         }
         return [...updated];
@@ -190,105 +199,92 @@ export default function AIChatPopup() {
 
   return (
     <>
+      {/* Chat toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 ${
+        className={`fixed bottom-6 right-6 w-13 h-13 rounded-full flex items-center justify-center transition-all duration-300 z-50 ${
           isOpen
-            ? "bg-slate-700 hover:bg-slate-800 rotate-0"
-            : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:scale-110"
-        } ${pulseCount < 3 && !isOpen ? "animate-bounce" : ""}`}
+            ? "bg-dex-elevated border border-dex-border shadow-md hover:bg-dex-border"
+            : "bg-dex-accent hover:bg-dex-accent-hover hover:scale-110 shadow-lg shadow-dex-accent/20"
+        } ${pulseCount < 3 && !isOpen ? "glow-pulse" : ""}`}
+        style={{ width: 52, height: 52 }}
       >
         {isOpen ? (
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-dex-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         ) : (
-          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
         )}
       </button>
 
+      {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-[420px] max-h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden animate-in">
-          <div className="bg-gradient-to-r from-red-600 to-red-500 px-5 py-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="animate-slide-up fixed bottom-24 right-6 w-[400px] max-h-[560px] bg-dex-surface rounded-2xl border border-dex-border/80 flex flex-col z-50 overflow-hidden shadow-2xl shadow-black/10">
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-dex-border/50 flex items-center gap-3 bg-dex-bg">
+            <div className="w-8 h-8 rounded-lg bg-dex-accent/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-dex-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-white font-bold text-sm">Pokedex AI</h3>
-              <p className="text-red-100 text-xs">Powered by Coveo RGA + Passage Retrieval</p>
+              <h3 className="text-sm font-syne font-bold text-dex-text">Pokedex AI</h3>
             </div>
-            <div className="ml-auto flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-red-100 text-xs">Online</span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[10px] font-mono text-dex-text-muted">Online</span>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-[300px] max-h-[420px] bg-slate-50">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-[280px] max-h-[380px] bg-dex-bg/50">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className="max-w-[85%]">
                   {msg.role === "assistant" && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="w-5 h-5 rounded-md bg-dex-accent/10 flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-dex-accent" />
                       </div>
-                      <span className="text-xs text-slate-400 font-medium">Pokedex AI</span>
+                      <span className="text-[10px] font-mono text-dex-text-muted">AI</span>
                     </div>
                   )}
-                  <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-red-600 text-white rounded-br-md"
-                      : "bg-white text-slate-700 border border-slate-200 rounded-bl-md shadow-sm"
+                      ? "bg-dex-accent text-white rounded-br-sm"
+                      : "bg-dex-surface text-dex-text-secondary border border-dex-border/50 rounded-bl-sm shadow-sm"
                   }`}>
                     {msg.isStreaming && !msg.content ? (
                       <div className="flex items-center gap-1.5 py-1">
-                        <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <div className="w-1.5 h-1.5 bg-dex-text-muted rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="w-1.5 h-1.5 bg-dex-text-muted rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="w-1.5 h-1.5 bg-dex-text-muted rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
                     ) : (
                       <span className="whitespace-pre-line">{msg.content}</span>
                     )}
                   </div>
 
-                  {msg.passages && msg.passages.length > 0 && (
-                    <div className="mt-2 space-y-1.5">
-                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide px-1">Sources (Passage Retrieval API)</p>
-                      {msg.passages.map((p, j) => (
-                        <div key={j} className="bg-white rounded-lg border border-blue-200 p-2.5 text-xs">
-                          <p className="text-slate-600 leading-relaxed italic">{"“"}{p.text.slice(0, 150)}{p.text.length > 150 ? "..." : ""}{"”"}</p>
-                          <div className="flex items-center justify-between mt-1.5">
-                            <span className="text-blue-600 font-medium">{p.document.title}</span>
-                            <span className="text-slate-400">{Math.round(p.relevanceScore * 100)}% match</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
                   {msg.pokemonResults && msg.pokemonResults.length > 0 && (
-                    <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="mt-2 grid grid-cols-2 gap-1.5">
                       {msg.pokemonResults.map((p, j) => (
                         <a
                           key={j}
                           href={`/pokemon/${p.title.toLowerCase().replace(/\s+/g, "-")}`}
-                          className="bg-white rounded-xl border border-slate-200 p-3 flex items-center gap-3 hover:border-red-300 hover:shadow-md transition-all group"
+                          className="bg-dex-surface rounded-lg border border-dex-border/50 p-2.5 flex items-center gap-2.5 hover:border-dex-accent/30 hover:shadow-sm transition-all group"
                         >
                           {p.image && (
-                            <img src={p.image} alt={p.title} className="w-12 h-12 object-contain group-hover:scale-110 transition-transform" />
+                            <img src={p.image} alt={p.title} className="w-10 h-10 object-contain group-hover:scale-110 transition-transform" />
                           )}
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-800 truncate">{p.title}</p>
-                            <p className="text-[10px] text-slate-400 font-mono">#{String(p.number).padStart(4, "0")}</p>
-                            <div className="flex gap-1 mt-1">
+                            <p className="text-[11px] font-semibold text-dex-text truncate">{p.title}</p>
+                            <p className="text-[9px] text-dex-text-muted font-mono">#{String(p.number).padStart(4, "0")}</p>
+                            <div className="flex gap-1 mt-0.5">
                               {p.types.map((t) => (
-                                <span key={t} className={`${typeColors[t] || "bg-gray-400"} text-white text-[9px] px-1.5 py-0.5 rounded-full`}>{t}</span>
+                                <span key={t} className={`${typeColors[t] || "bg-zinc-500"} text-white text-[8px] px-1 py-0 rounded-full`}>{t}</span>
                               ))}
                             </div>
                           </div>
@@ -302,7 +298,8 @@ export default function AIChatPopup() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="p-3 border-t border-slate-200 bg-white">
+          {/* Input */}
+          <form onSubmit={handleSubmit} className="p-3 border-t border-dex-border/50 bg-dex-surface">
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -311,12 +308,12 @@ export default function AIChatPopup() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about Pokemon..."
                 disabled={isLoading}
-                className="flex-1 px-4 py-2.5 bg-slate-100 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:bg-white transition-all disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 bg-dex-elevated border border-dex-border/40 rounded-lg text-sm text-dex-text placeholder-dex-text-muted focus:outline-none focus:border-dex-accent/40 transition-all disabled:opacity-40"
               />
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="bg-dex-accent text-white px-4 py-2.5 rounded-lg hover:bg-dex-accent-hover active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -326,37 +323,20 @@ export default function AIChatPopup() {
           </form>
         </div>
       )}
-
-      <style jsx>{`
-        .animate-in {
-          animation: slideUp 0.3s ease-out;
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px) scale(0.95); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}</style>
     </>
   );
 }
 
-function buildPassageAnswer(query: string, passages: Passage[]): string {
-  const topPassage = passages[0];
-  const source = topPassage.document.title;
-  return `Based on what I found about "${query}":\n\n${topPassage.text}\n\n(from ${source})`;
-}
-
 function buildFallbackAnswer(
-  query: string,
-  results: { title: string; types: string[]; number: number }[]
+  _query: string,
+  results: { title: string; types: string[]; number: number; species: string }[]
 ): string {
   if (results.length === 0) {
     return "I couldn't find any Pokemon matching that. Try a specific name or type!";
   }
-  const names = results.map((r) => r.title);
-  if (results.length === 1) {
-    const p = results[0];
-    return `I found ${p.title} (#${p.number}), a ${p.types.join("/")} type. Click the card below for details.`;
-  }
-  return `Here's what I found for "${query}": ${names.join(", ")}${results.length >= 4 ? " and more" : ""}. Click any card for details.`;
+  const best = results[0];
+  let answer = `${best.title} (#${best.number}) is a ${best.types.join("/")} type`;
+  if (best.species) answer += ` (${best.species})`;
+  answer += ".";
+  return answer;
 }
