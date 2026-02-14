@@ -48,7 +48,6 @@ export default function PokemonDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Separate engine to avoid messing with the main search page state
     async function load() {
       const engine = buildSearchEngine({
         configuration: {
@@ -74,22 +73,23 @@ export default function PokemonDetailPage() {
 
       const searchName = name.replace(/-/g, " ");
       engine.dispatch(updateQuery({ q: searchName }));
+      engine.dispatch(executeSearch(logSearchFromLink()));
 
-      // Wait for results to come back
-      const done = new Promise<void>((resolve) => {
+      // Wait for the search to actually complete (not just initial idle state)
+      await new Promise<void>((resolve) => {
+        let searchStarted = false;
         const unsub = resultList.subscribe(() => {
-          if (resultList.state.results.length > 0 || !resultList.state.isLoading) {
+          if (resultList.state.isLoading) {
+            searchStarted = true;
+          }
+          if (searchStarted && !resultList.state.isLoading) {
             unsub();
             resolve();
           }
         });
-        setTimeout(() => { unsub(); resolve(); }, 5000);
+        setTimeout(() => { unsub(); resolve(); }, 8000);
       });
 
-      engine.dispatch(executeSearch(logSearchFromLink()));
-      await done;
-
-      // Try to match by name, fall back to first result
       const results = resultList.state.results;
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       const match = results.find(
@@ -118,10 +118,9 @@ export default function PokemonDetailPage() {
           excerpt: match.excerpt || "",
         });
       }
-      setLoading(false);
     }
 
-    load();
+    load().finally(() => setLoading(false));
   }, [name]);
 
   if (loading) {
