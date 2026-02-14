@@ -83,29 +83,25 @@ I went with the Push API instead of the Web Crawler. The Web Crawler would have 
 
 One thing that tripped me up: the API key has to be generated directly from the Push source in the admin console. A manually created API key with the same permissions didn't work. Took me a while to figure that out.
 
-### Headless architecture
+### Headless
 
-Headless is basically a state management layer for search. Each "controller" (search box, facet, pager, etc.) is a standalone object with its own state and actions. You subscribe to state changes and render however you want. It's the same idea as Redux or Zustand but specifically for search.
+Think of it like Redux but for search. Each "controller" (search box, facet, pager, etc.) has its own state and actions, and they all share the same engine. So when you select a facet, the result list, query summary, and pager all update automatically. I didn't have to wire any of that.
 
-The nice thing is that everything stays in sync automatically. When you select a facet value, the result list updates, the query summary updates, the pager resets to page 1 - all because they share the same engine. I didn't have to wire any of that manually.
+I extracted a `useCoveoController` hook to avoid copy-pasting the subscribe/unsubscribe logic in every component. `ResultList` is the only one that doesn't use it because it needs two controllers at once (results + query summary).
 
-I ended up extracting a `useCoveoController` hook to avoid repeating the subscribe/unsubscribe boilerplate in every component. The only component that doesn't use it is `ResultList` because it needs two controllers at once (results + query summary).
+### RGA
 
-### RGA (Relevance Generative Answering)
-
-RGA is Coveo's GenAI answer feature. It takes the search results and generates a natural language answer using an LLM, with citations back to the source documents. In the admin console you need to create both an RGA model and a Semantic Encoder model, then associate them to your query pipeline.
-
-On the frontend, you just use `buildGeneratedAnswer` from Headless and it handles the streaming response. The component shows up when the model has enough context to generate an answer, otherwise it stays hidden.
+Coveo's GenAI answer feature. You create an RGA model + a Semantic Encoder in the admin, associate both to your query pipeline, and on the frontend you just call `buildGeneratedAnswer`. It streams the answer and shows citations. Pretty straightforward once the models are set up.
 
 ### Passage Retrieval API
 
-This was the bonus feature. Instead of returning full documents, the Passage Retrieval API returns specific text chunks that are relevant to a query. It's a direct REST call to `/rest/search/v3/passages/retrieve` since Headless doesn't have a built-in controller for it.
+The bonus. Instead of returning full documents, this API returns the specific text chunks that match a query. Headless doesn't have a controller for it so I called the REST endpoint directly (`/rest/search/v3/passages/retrieve`).
 
-I used it on the detail page to pull relevant passages about each Pokemon. In a real enterprise context, this would be useful for long technical docs or knowledge bases where the answer is buried in a 50-page PDF. The API finds the exact paragraph instead of making the user scroll through the whole document.
+I used it on the detail page to pull relevant passages about each Pokemon. Where I see the real value is for customers that have big documentation or knowledge bases - when someone asks a question, you get the exact paragraph instead of a link to a 50-page PDF.
 
 ### Query pipelines
 
-The query pipeline is where you configure how search behaves. You associate ML models (RGA, Query Suggestions, Semantic Encoder) to it, set up ranking rules, and define conditions. Everything on my frontend points to the same pipeline through the `searchHub: "PokemonSearch"` configuration.
+This is where everything comes together on the Coveo side. The ML models (RGA, Query Suggestions, Semantic Encoder) are all associated to a pipeline, and the frontend connects to it via the `searchHub`. I only used one pipeline for this project but I can see how you'd set up different ones for different use cases (internal search vs customer-facing, etc.).
 
 ## Known limitations
 
