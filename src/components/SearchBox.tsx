@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { buildSearchBox, Suggestion } from "@coveo/headless";
 import { getSearchEngine } from "@/lib/coveo-engine";
 import { useCoveoController } from "@/hooks/useCoveoController";
@@ -18,9 +18,17 @@ export default function SearchBox() {
   ).current;
 
   const { state } = useCoveoController(controller);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    controller.updateText(e.target.value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => controller.submit(), 400);
+  }, [controller]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    clearTimeout(debounceRef.current);
     controller.submit();
   };
 
@@ -36,7 +44,7 @@ export default function SearchBox() {
           <input
             type="text"
             value={state.value}
-            onChange={(e) => controller.updateText(e.target.value)}
+            onChange={onChange}
             onFocus={() => controller.showSuggestions()}
             placeholder="Search Pokemon by name, type, ability..."
             className="w-full pl-14 pr-28 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:border-white/40 focus:bg-white/15 focus:outline-none text-white placeholder-red-200/50 text-lg transition-all"

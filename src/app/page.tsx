@@ -13,11 +13,13 @@ import MobileFacets from "@/components/MobileFacets";
 export default function Home() {
   const [ready, setReady] = useState(false);
 
+  // Mount components first so facets register with the engine
+  useEffect(() => { setReady(true); }, []);
+
+  // Then execute the first search after controllers are created
   useEffect(() => {
-    const engine = getSearchEngine();
-    engine.executeFirstSearch();
-    setReady(true);
-  }, []);
+    if (ready) getSearchEngine().executeFirstSearch();
+  }, [ready]);
 
   if (!ready) {
     return (
