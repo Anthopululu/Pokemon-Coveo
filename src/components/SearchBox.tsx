@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { buildSearchBox, Suggestion } from "@coveo/headless";
 import { getSearchEngine } from "@/lib/coveo-engine";
 import { useCoveoController } from "@/hooks/useCoveoController";
@@ -18,21 +18,30 @@ export default function SearchBox() {
   ).current;
 
   const { state } = useCoveoController(controller);
+  const [localValue, setLocalValue] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    controller.updateText(e.target.value);
+    const val = e.target.value;
+    setLocalValue(val);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => controller.submit(), 400);
+    debounceRef.current = setTimeout(() => {
+      controller.updateText(val);
+      controller.submit();
+    }, 500);
   }, [controller]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     clearTimeout(debounceRef.current);
+    controller.updateText(localValue);
     controller.submit();
   };
 
-  const pickSuggestion = (s: Suggestion) => controller.selectSuggestion(s.rawValue);
+  const pickSuggestion = (s: Suggestion) => {
+    setLocalValue(s.rawValue);
+    controller.selectSuggestion(s.rawValue);
+  };
 
   return (
     <div className="relative w-full max-w-2xl">
@@ -43,9 +52,12 @@ export default function SearchBox() {
           </svg>
           <input
             type="text"
-            value={state.value}
+            value={localValue}
             onChange={onChange}
-            onFocus={() => controller.showSuggestions()}
+            onFocus={() => {
+              controller.updateText(localValue);
+              controller.showSuggestions();
+            }}
             placeholder="Search Pokemon by name, type, ability..."
             className="w-full pl-12 pr-24 py-3.5 bg-white border-2 border-transparent rounded-xl focus:border-red-300 focus:ring-4 focus:ring-red-100 focus:outline-none text-slate-900 placeholder-slate-400 text-base shadow-sm transition-all"
           />
