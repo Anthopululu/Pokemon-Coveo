@@ -28,24 +28,24 @@ export default function Facet({ field, title }: FacetProps) {
 
   return (
     <div className="mb-6">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
         {title}
       </h3>
-      <ul className="space-y-1">
+      <ul className="space-y-0.5">
         {visible.map((val) => (
           <li key={val.value}>
             <button
               onClick={() => toggle(val)}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center transition-colors ${
                 val.state === "selected"
-                  ? "bg-red-50 text-red-700 font-medium"
-                  : "text-gray-600 hover:bg-gray-50"
+                  ? "bg-red-500/20 text-red-400 font-medium"
+                  : "text-slate-300 hover:bg-slate-700/50"
               }`}
             >
               <span>{val.value}</span>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
-                  val.state === "selected" ? "bg-red-100" : "bg-gray-100"
+                  val.state === "selected" ? "bg-red-500/20 text-red-400" : "bg-slate-700 text-slate-400"
                 }`}
               >
                 {val.numberOfResults}
@@ -57,7 +57,7 @@ export default function Facet({ field, title }: FacetProps) {
       {state.canShowMoreValues && (
         <button
           onClick={() => facet.showMoreValues()}
-          className="mt-2 text-sm text-red-500 hover:text-red-600"
+          className="mt-2 text-sm text-red-400 hover:text-red-300"
         >
           Show more
         </button>

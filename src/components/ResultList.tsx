@@ -33,22 +33,23 @@ export default function ResultList() {
   return (
     <div>
       {summary.hasResults && (
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-slate-400 mb-4">
           Showing {summary.firstResult}&ndash;{summary.lastResult} of{" "}
           {summary.total} results
           {summary.query && (
-            <> for <strong>&ldquo;{summary.query}&rdquo;</strong></>
+            <> for <strong className="text-slate-200">&ldquo;{summary.query}&rdquo;</strong></>
           )}
           {" "}({summary.durationInSeconds.toFixed(2)}s)
         </p>
       )}
 
       {!summary.hasResults && summary.hasQuery && (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">
+        <div className="text-center py-16">
+          <div className="text-6xl mb-4">:(</div>
+          <p className="text-slate-400 text-lg">
             No Pokemon found for &ldquo;{summary.query}&rdquo;
           </p>
-          <p className="text-gray-400 mt-2">Try a different search term</p>
+          <p className="text-slate-500 mt-2">Try a different search term</p>
         </div>
       )}
 

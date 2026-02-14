@@ -18,14 +18,14 @@ const criteria = [
 
 export default function Sort() {
   const sort = useRef(buildSort(getSearchEngine())).current;
-  useCoveoController(sort); // triggers re-render on sort change
+  useCoveoController(sort);
 
   return (
     <div className="flex items-center gap-2 mb-4">
-      <span className="text-sm text-gray-500">Sort by:</span>
+      <span className="text-sm text-slate-500">Sort by:</span>
       <select
         onChange={(e) => sort.sortBy(criteria[parseInt(e.target.value)].criterion)}
-        className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700"
+        className="text-sm border border-slate-700 rounded-lg px-3 py-1.5 bg-slate-800 text-slate-300 focus:outline-none focus:border-red-500"
       >
         {criteria.map((c, i) => (
           <option key={i} value={i}>{c.label}</option>
