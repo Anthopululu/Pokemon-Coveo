@@ -28,7 +28,7 @@ export default function Facet({ field, title }: FacetProps) {
 
   return (
     <div className="mb-6 last:mb-0">
-      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+      <h3 className="text-[10px] font-mono font-medium text-dex-text-muted uppercase tracking-[0.15em] mb-3">
         {title}
       </h3>
       <ul className="space-y-0.5">
@@ -36,16 +36,16 @@ export default function Facet({ field, title }: FacetProps) {
           <li key={val.value}>
             <button
               onClick={() => toggle(val)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center transition-colors ${
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center transition-all ${
                 val.state === "selected"
-                  ? "bg-red-50 text-red-700 font-medium border border-red-200"
-                  : "text-slate-700 hover:bg-slate-50 border border-transparent"
+                  ? "bg-dex-accent/8 text-dex-accent border border-dex-accent/20"
+                  : "text-dex-text-secondary hover:text-dex-text hover:bg-dex-elevated border border-transparent"
               }`}
             >
-              <span>{val.value}</span>
+              <span className="truncate">{val.value}</span>
               <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  val.state === "selected" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
+                className={`text-[10px] font-mono ml-2 flex-shrink-0 ${
+                  val.state === "selected" ? "text-dex-accent/60" : "text-dex-text-muted/50"
                 }`}
               >
                 {val.numberOfResults}
@@ -57,9 +57,9 @@ export default function Facet({ field, title }: FacetProps) {
       {state.canShowMoreValues && (
         <button
           onClick={() => facet.showMoreValues()}
-          className="mt-2 text-sm text-red-500 hover:text-red-600 font-medium"
+          className="mt-2 text-xs text-dex-accent hover:text-dex-accent-hover font-mono transition-colors"
         >
-          Show more
+          + more
         </button>
       )}
     </div>
