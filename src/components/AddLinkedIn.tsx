@@ -24,9 +24,22 @@ export default function AddLinkedIn() {
   }, [isOpen]);
 
   const [searching, setSearching] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   const searchForPerson = (name: string) => {
     setSearching(true);
+    setCountdown(15);
+
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+
     setTimeout(() => {
       const engine = getSearchEngine();
       const { updateQuery } = loadQueryActions(engine);
@@ -36,7 +49,7 @@ export default function AddLinkedIn() {
       engine.dispatch(executeSearch(logSearchFromLink()));
       resetAndClose();
       setSearching(false);
-    }, 5000);
+    }, 15000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,7 +159,7 @@ export default function AddLinkedIn() {
                     {searching ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Indexing...
+                        Indexing... {countdown > 0 ? `${countdown}s` : ""}
                       </>
                     ) : (
                       <>Search for {addedName}</>
