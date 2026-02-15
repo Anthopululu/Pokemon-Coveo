@@ -9,6 +9,7 @@ import Facet from "@/components/Facet";
 import Pager from "@/components/Pager";
 import MobileFacets from "@/components/MobileFacets";
 import AIChatPopup from "@/components/AIChatPopup";
+import AddLinkedIn from "@/components/AddLinkedIn";
 import GenAIAnswer from "@/components/GenAIAnswer";
 import DidYouMean from "@/components/DidYouMean";
 
@@ -101,6 +102,7 @@ export default function Home() {
         </div>
       </footer>
 
+      <AddLinkedIn />
       <AIChatPopup />
     </div>
   );
