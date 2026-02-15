@@ -16,8 +16,6 @@ export default function PokemonCard({ result, index }: Props) {
     buildInteractiveResult(getSearchEngine(), { options: { result } })
   ).current;
 
-  const [deleted, setDeleted] = useState(false);
-
   const raw = result.raw as Record<string, unknown>;
   const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
   const image = raw.pokemonimage as string;
@@ -26,26 +24,45 @@ export default function PokemonCard({ result, index }: Props) {
   const generation = raw.pokemongeneration as string;
   const isLinkedIn = generation === "LinkedIn" || raw.pokemoncategory === "People";
 
+  const [hidden, setHidden] = useState(false);
+
   const primaryType = types[0] || "Normal";
   const bgGradient = typeBgGradients[primaryType] || "from-zinc-50 to-stone-100";
   const accentColor = typeHex[primaryType] || "#a1a1aa";
   const slug = result.title.toLowerCase().replace(/\s+/g, "-");
 
+  const documentId = isLinkedIn
+    ? `linkedin://${(result.clickUri || result.uri).replace(/https?:\/\//, "")}`
+    : "";
+
+  const isDeleted = () => {
+    try {
+      const deleted = JSON.parse(sessionStorage.getItem("deletedLinkedIn") || "[]");
+      return deleted.includes(documentId);
+    } catch { return false; }
+  };
+
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    setDeleted(true);
+    try {
+      const deleted = JSON.parse(sessionStorage.getItem("deletedLinkedIn") || "[]");
+      deleted.push(documentId);
+      sessionStorage.setItem("deletedLinkedIn", JSON.stringify(deleted));
+    } catch {}
 
-    const documentId = `linkedin://${(result.clickUri || result.uri).replace(/https?:\/\//, "")}`;
     fetch("/api/linkedin/add", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ documentId }),
     });
+
+    setHidden(true);
+    window.dispatchEvent(new Event("linkedin-deleted"));
   };
 
-  if (deleted) return null;
+  if (isLinkedIn && (hidden || isDeleted())) return null;
 
   const cardContent = (
     <div
