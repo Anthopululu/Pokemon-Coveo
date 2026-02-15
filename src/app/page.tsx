@@ -47,7 +47,7 @@ export default function Home() {
       <SearchUrlManager />
       <div className="h-1 coveo-gradient" />
 
-      <header className="relative border-b border-dex-border/60 bg-dex-surface/80 backdrop-blur-sm">
+      <header className="relative border-b border-dex-border/60 bg-dex-surface/80 backdrop-blur-sm z-20 overflow-visible">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-7 relative">
           <div className="flex items-center gap-4 mb-8">
             <div className="relative">
