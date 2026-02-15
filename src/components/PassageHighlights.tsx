@@ -22,20 +22,20 @@ export default function PassageHighlights({ pokemonName }: Props) {
 
   return (
     <div className="mt-6">
-      <h2 className="text-xl font-bold text-slate-800 mb-3">
-        Relevant Passages
-        <span className="text-xs font-normal text-slate-400 ml-2">via Coveo Passage Retrieval API</span>
+      <h2 className="text-lg font-syne font-bold text-dex-text mb-3 tracking-tight">
+        Passages
+        <span className="text-[10px] font-mono font-normal text-dex-text-muted ml-2 tracking-wider">Coveo CPR</span>
       </h2>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {passages.map((p, i) => (
-          <div key={i} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-            <p className="text-slate-700 text-sm leading-relaxed">{p.text}</p>
+          <div key={i} className="bg-dex-elevated/60 rounded-lg p-4 border border-dex-border/40">
+            <p className="text-dex-text-secondary text-sm leading-relaxed">{p.text}</p>
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-slate-400">
-                from {p.document.title}
+              <span className="text-[10px] font-mono text-dex-text-muted">
+                {p.document.title}
               </span>
-              <span className="text-xs text-slate-400">
-                {(p.relevanceScore * 100).toFixed(0)}% match
+              <span className="text-[10px] font-mono text-dex-accent/70">
+                {(p.relevanceScore * 100).toFixed(0)}%
               </span>
             </div>
           </div>

@@ -7,14 +7,14 @@ export default function MobileFacets() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="lg:hidden mb-4">
+    <div className="lg:hidden mb-5">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm shadow-sm"
+        className="w-full flex items-center justify-between px-4 py-3 bg-dex-surface border border-dex-border/40 rounded-xl text-sm"
       >
-        <span className="font-medium text-slate-700">Filters</span>
+        <span className="font-mono text-dex-text-secondary text-xs uppercase tracking-wider">Filters</span>
         <svg
-          className={`w-5 h-5 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`w-4 h-4 text-dex-text-muted transition-transform ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -23,7 +23,7 @@ export default function MobileFacets() {
         </svg>
       </button>
       {isOpen && (
-        <div className="mt-2 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+        <div className="mt-2 p-4 bg-dex-surface border border-dex-border/40 rounded-xl">
           <Facet field="pokemontype" title="Type" />
           <Facet field="pokemongeneration" title="Generation" />
         </div>

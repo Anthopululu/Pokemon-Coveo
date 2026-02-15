@@ -30,6 +30,7 @@ export async function retrievePassages(query: string): Promise<Passage[]> {
       },
       body: JSON.stringify({
         query,
+        localization: { locale: "en" },
         additionalFields: ["clickableuri", "pokemontype"],
         maxPassages: 3,
         searchHub: "PokemonSearch",

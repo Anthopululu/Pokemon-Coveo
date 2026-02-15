@@ -7,9 +7,9 @@ import SearchBox from "@/components/SearchBox";
 import ResultList from "@/components/ResultList";
 import Facet from "@/components/Facet";
 import Pager from "@/components/Pager";
-import GenAIAnswer from "@/components/GenAIAnswer";
 import MobileFacets from "@/components/MobileFacets";
 import AIChatPopup from "@/components/AIChatPopup";
+import GenAIAnswer from "@/components/GenAIAnswer";
 
 export default function Home() {
   const [ready, setReady] = useState(false);
@@ -19,7 +19,6 @@ export default function Home() {
   useEffect(() => {
     if (ready) {
       const engine = getSearchEngine();
-      // Force search on every mount so facets reload after back-navigation
       const { executeSearch } = loadSearchActions(engine);
       const { logInterfaceLoad } = loadSearchAnalyticsActions(engine);
       engine.dispatch(executeSearch(logInterfaceLoad()));
@@ -28,56 +27,64 @@ export default function Home() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-dex-bg">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500 text-lg">Loading Pokedex...</p>
+          <div className="w-14 h-14 border-2 border-dex-accent border-t-transparent rounded-full spinner mx-auto mb-4" />
+          <p className="text-dex-text-muted font-mono text-sm tracking-wider uppercase">Loading Pokedex</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-gradient-to-r from-red-600 to-red-500 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow">
-              <div className="w-6 h-6 rounded-full bg-red-500 border-2 border-slate-700 relative">
-                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-slate-700" />
-                <div className="absolute w-2 h-2 bg-white rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border border-slate-700" />
+    <div className="min-h-screen bg-dex-bg relative">
+      {/* Top accent bar - Coveo gradient */}
+      <div className="h-1 coveo-gradient" />
+
+      <header className="relative border-b border-dex-border/60 bg-dex-surface/80 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-7 relative">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full coveo-gradient flex items-center justify-center shadow-sm">
+                <div className="w-4 h-4 rounded-full bg-white" />
               </div>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Pokedex</h1>
-              <p className="text-red-100 text-xs">Powered by Coveo</p>
+              <h1 className="text-2xl font-syne font-extrabold tracking-tight text-dex-text">
+                POKEDE<span className="coveo-gradient-text">X</span>
+              </h1>
+              <p className="text-[11px] font-mono text-dex-text-muted tracking-widest uppercase">
+                Powered by Coveo
+              </p>
             </div>
           </div>
           <SearchBox />
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 relative">
         <div className="flex gap-8">
-          <aside className="w-60 flex-shrink-0 hidden lg:block">
-            <div className="sticky top-6 bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-5 pb-3 border-b border-slate-100">Filters</h2>
+          <aside className="w-56 flex-shrink-0 hidden lg:block">
+            <div className="sticky top-6 bg-dex-surface rounded-xl border border-dex-border/60 p-5 shadow-sm">
+              <h2 className="text-[11px] font-mono font-medium text-dex-text-muted uppercase tracking-[0.2em] mb-5 pb-3 border-b border-dex-border/50">
+                Filters
+              </h2>
               <Facet field="pokemontype" title="Type" />
               <Facet field="pokemongeneration" title="Generation" />
             </div>
           </aside>
 
           <div className="flex-1 min-w-0">
-            <MobileFacets />
             <GenAIAnswer />
+            <MobileFacets />
             <ResultList />
             <Pager />
           </div>
         </div>
       </main>
 
-      <footer className="border-t border-slate-200 mt-8 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-slate-400">
+      <footer className="border-t border-dex-border/40 mt-12 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs font-mono text-dex-text-muted/60 tracking-wide">
           Pokemon data from pokemondb.net &middot; Search powered by Coveo
         </div>
       </footer>

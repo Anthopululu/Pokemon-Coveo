@@ -15,22 +15,22 @@ export default function Pager() {
   if (state.maxPage <= 1) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 mt-8">
+    <div className="flex items-center justify-center gap-1.5 mt-10">
       <button
         onClick={() => pager.previousPage()}
         disabled={!state.hasPreviousPage}
-        className="px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+        className="px-3 py-2 text-sm rounded-lg border border-dex-border/40 text-dex-text-muted disabled:opacity-20 hover:bg-dex-elevated hover:text-dex-text transition-all font-mono"
       >
-        Previous
+        &larr;
       </button>
       {state.currentPages.map((page) => (
         <button
           key={page}
           onClick={() => pager.selectPage(page)}
-          className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+          className={`w-9 h-9 text-sm rounded-lg transition-all font-mono ${
             pager.isCurrentPage(page)
-              ? "bg-red-600 text-white shadow-sm"
-              : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+              ? "coveo-gradient text-white shadow-lg shadow-dex-accent/20"
+              : "border border-dex-border/40 text-dex-text-muted hover:bg-dex-elevated hover:text-dex-text"
           }`}
         >
           {page}
@@ -39,9 +39,9 @@ export default function Pager() {
       <button
         onClick={() => pager.nextPage()}
         disabled={!state.hasNextPage}
-        className="px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+        className="px-3 py-2 text-sm rounded-lg border border-dex-border/40 text-dex-text-muted disabled:opacity-20 hover:bg-dex-elevated hover:text-dex-text transition-all font-mono"
       >
-        Next
+        &rarr;
       </button>
     </div>
   );
