@@ -37,20 +37,20 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-dex-bg relative">
-      {/* Top accent bar */}
-      <div className="h-1 bg-gradient-to-r from-dex-accent via-cyan-400 to-dex-accent" />
+      {/* Top accent bar - Coveo gradient */}
+      <div className="h-1 coveo-gradient" />
 
       <header className="relative border-b border-dex-border/60 bg-dex-surface/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-7 relative">
           <div className="flex items-center gap-4 mb-8">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full border-2 border-dex-accent/50 flex items-center justify-center bg-dex-surface shadow-sm">
-                <div className="w-4 h-4 rounded-full bg-dex-accent" />
+              <div className="w-10 h-10 rounded-full coveo-gradient flex items-center justify-center shadow-sm">
+                <div className="w-4 h-4 rounded-full bg-white" />
               </div>
             </div>
             <div>
               <h1 className="text-2xl font-syne font-extrabold tracking-tight text-dex-text">
-                POKEDE<span className="text-dex-accent">X</span>
+                POKEDE<span className="coveo-gradient-text">X</span>
               </h1>
               <p className="text-[11px] font-mono text-dex-text-muted tracking-widest uppercase">
                 Powered by Coveo

@@ -205,7 +205,7 @@ export default function AIChatPopup() {
         className={`fixed bottom-6 right-6 w-13 h-13 rounded-full flex items-center justify-center transition-all duration-300 z-50 ${
           isOpen
             ? "bg-dex-elevated border border-dex-border shadow-md hover:bg-dex-border"
-            : "bg-dex-accent hover:bg-dex-accent-hover hover:scale-110 shadow-lg shadow-dex-accent/20"
+            : "coveo-gradient hover:scale-110 shadow-lg shadow-dex-accent/25"
         } ${pulseCount < 3 && !isOpen ? "glow-pulse" : ""}`}
         style={{ width: 52, height: 52 }}
       >
@@ -225,8 +225,8 @@ export default function AIChatPopup() {
         <div className="animate-slide-up fixed bottom-24 right-6 w-[400px] max-h-[560px] bg-dex-surface rounded-2xl border border-dex-border/80 flex flex-col z-50 overflow-hidden shadow-2xl shadow-black/10">
           {/* Header */}
           <div className="px-5 py-4 border-b border-dex-border/50 flex items-center gap-3 bg-dex-bg">
-            <div className="w-8 h-8 rounded-lg bg-dex-accent/10 flex items-center justify-center">
-              <svg className="w-4 h-4 text-dex-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 rounded-lg coveo-gradient flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
@@ -246,15 +246,15 @@ export default function AIChatPopup() {
                 <div className="max-w-[85%]">
                   {msg.role === "assistant" && (
                     <div className="flex items-center gap-2 mb-1.5">
-                      <div className="w-5 h-5 rounded-md bg-dex-accent/10 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-dex-accent" />
+                      <div className="w-5 h-5 rounded-md coveo-gradient flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-white" />
                       </div>
                       <span className="text-[10px] font-mono text-dex-text-muted">AI</span>
                     </div>
                   )}
                   <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-dex-accent text-white rounded-br-sm"
+                      ? "coveo-gradient text-white rounded-br-sm"
                       : "bg-dex-surface text-dex-text-secondary border border-dex-border/50 rounded-bl-sm shadow-sm"
                   }`}>
                     {msg.isStreaming && !msg.content ? (
@@ -313,7 +313,7 @@ export default function AIChatPopup() {
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="bg-dex-accent text-white px-4 py-2.5 rounded-lg hover:bg-dex-accent-hover active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="coveo-gradient-btn text-white px-4 py-2.5 rounded-lg active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

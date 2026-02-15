@@ -7,18 +7,44 @@
   --dex-surface: #ffffff;
   --dex-elevated: #f3f1f6;
   --dex-border: #e2dfe8;
-  --dex-text: #1a1a1a;
-  --dex-text-secondary: #555555;
-  --dex-text-muted: #999999;
+  --dex-text: #282829;
+  --dex-text-secondary: #626971;
+  --dex-text-muted: #b9bdc7;
   --dex-accent: #8a36ff;
   --dex-accent-hover: #7928e6;
   --dex-accent-subtle: rgba(138, 54, 255, 0.06);
   --dex-accent-glow: rgba(138, 54, 255, 0.15);
+  --dex-turquoise: #1cebcf;
+  --dex-cerulean: #00adff;
+  --dex-governor: #2e45ba;
 }
 
 body {
   background: var(--dex-bg);
   color: var(--dex-text);
+}
+
+/* Coveo signature gradient */
+.coveo-gradient {
+  background: linear-gradient(135deg, #1cebcf, #00adff, #2e45ba, #8a36ff);
+}
+.coveo-gradient-text {
+  background: linear-gradient(135deg, #1cebcf, #00adff, #2e45ba, #8a36ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.coveo-gradient-hover {
+  background: linear-gradient(135deg, #17d4ba, #009be6, #263ca6, #7928e6);
+}
+.coveo-gradient-btn {
+  background: linear-gradient(135deg, #1cebcf, #00adff, #2e45ba, #8a36ff);
+  background-size: 200% 200%;
+  transition: background-position 0.4s ease, transform 0.15s ease, box-shadow 0.3s ease;
+}
+.coveo-gradient-btn:hover {
+  background-position: 100% 100%;
+  box-shadow: 0 4px 20px rgba(138, 54, 255, 0.25), 0 2px 8px rgba(0, 173, 255, 0.15);
 }
 
 /* Subtle noise overlay for texture */
@@ -73,11 +99,22 @@ body {
 
 /* Glow pulse for the chat button */
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(138, 54, 255, 0); }
-  50% { box-shadow: 0 0 20px 4px rgba(138, 54, 255, 0.25); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(138, 54, 255, 0), 0 0 0 0 rgba(28, 235, 207, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(138, 54, 255, 0.2), 0 0 30px 6px rgba(28, 235, 207, 0.1); }
 }
 .glow-pulse {
   animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Animated gradient shine */
+@keyframes gradientShine {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.gradient-shine {
+  background-size: 200% 200%;
+  animation: gradientShine 3s ease infinite;
 }
 
 /* Spinner */
@@ -97,5 +134,5 @@ body {
 /* Selection */
 ::selection {
   background: rgba(138, 54, 255, 0.2);
-  color: #1a1a1a;
+  color: #282829;
 }

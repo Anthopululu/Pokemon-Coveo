@@ -29,7 +29,7 @@ export default function Pager() {
           onClick={() => pager.selectPage(page)}
           className={`w-9 h-9 text-sm rounded-lg transition-all font-mono ${
             pager.isCurrentPage(page)
-              ? "bg-dex-accent text-white shadow-lg shadow-dex-accent/20"
+              ? "coveo-gradient text-white shadow-lg shadow-dex-accent/20"
               : "border border-dex-border/40 text-dex-text-muted hover:bg-dex-elevated hover:text-dex-text"
           }`}
         >

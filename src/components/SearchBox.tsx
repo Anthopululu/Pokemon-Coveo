@@ -68,7 +68,7 @@ export default function SearchBox() {
           />
           <button
             type="submit"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-dex-accent text-white px-5 py-2 rounded-lg hover:bg-dex-accent-hover active:scale-95 transition-all font-medium text-sm"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 coveo-gradient-btn text-white px-5 py-2 rounded-lg active:scale-95 font-medium text-sm"
           >
             Search
           </button>
