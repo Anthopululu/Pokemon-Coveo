@@ -119,7 +119,11 @@ export default function AIChatPopup() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, context }),
+          body: JSON.stringify({
+            query,
+            context,
+            history: messages.filter((m) => !m.isStreaming).slice(1, -1),
+          }),
         });
 
         if (res.ok && res.body) {
