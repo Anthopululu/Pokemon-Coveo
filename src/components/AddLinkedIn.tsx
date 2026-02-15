@@ -69,16 +69,6 @@ export default function AddLinkedIn() {
       const data = await res.json();
 
       if (res.ok) {
-        // Clear from deletedLinkedIn sessionStorage so re-added profiles show up
-        try {
-          const docId = `linkedin://${linkedinUrl.replace(/https?:\/\//, "")}`;
-          const entries = JSON.parse(sessionStorage.getItem("deletedLinkedIn") || "[]");
-          const filtered = entries.filter((e: { id: string } | string) =>
-            typeof e === "string" ? e !== docId : e.id !== docId
-          );
-          sessionStorage.setItem("deletedLinkedIn", JSON.stringify(filtered));
-        } catch {}
-
         setStatus("success");
         setMessage(data.message || "Profile added successfully!");
         setAddedName(data.name || "");
