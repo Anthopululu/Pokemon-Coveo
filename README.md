@@ -51,11 +51,16 @@ I also added a QRE (Query Ranking Expression) in the Coveo pipeline: `@pokemonnu
 
 ## Coveo Headless usage
 
-The app uses 14 controllers, 4 utility functions, and 2 action loaders from `@coveo/headless`, plus a direct REST call to the Passage Retrieval API.
+The app uses 14 controllers, 4 utility functions, 2 action loaders, and 1 direct REST call. Quick distinction:
+
+- **Controller** — has its own state that updates over time, you subscribe to it (like `buildFacet` which tracks checked values and counts)
+- **Utility function** — returns a config object and that's it, no state (like `buildFieldSortCriterion`)
+- **Action loader** — gives you an action to dispatch on the engine, one-shot (like `loadSearchActions`)
+- **REST call** — plain `fetch()` to a Coveo API that Headless doesn't cover
 
 ### Controllers
 
-Controllers are stateful objects. Each one manages a piece of the search UI: it holds its own state, reacts to search events, and exposes actions. I subscribe to each one via a `useCoveoController` hook that handles subscribe/unsubscribe.
+I subscribe to each controller via a `useCoveoController` hook that handles subscribe/unsubscribe.
 
 `buildSearchEngine` (coveo-engine.ts, detail page, chat) — the engine itself. Not technically a controller, but everything else plugs into it. I create three separate instances: one for the main search page, one for the detail page, and one for the chat popup. Each engine is an independent search context, so navigating to a detail page doesn't reset the main search.
 
