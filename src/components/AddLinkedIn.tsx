@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { buildSearchBox } from "@coveo/headless";
+import { getSearchEngine } from "@/lib/coveo-engine";
 
 export default function AddLinkedIn() {
   const [isOpen, setIsOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [addedName, setAddedName] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const searchBox = useRef(
+    buildSearchBox(getSearchEngine(), { options: { numberOfSuggestions: 0 } })
+  ).current;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -19,6 +26,12 @@ export default function AddLinkedIn() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
+
+  const searchForPerson = (name: string) => {
+    searchBox.updateText(name);
+    searchBox.submit();
+    resetAndClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +53,7 @@ export default function AddLinkedIn() {
       if (res.ok) {
         setStatus("success");
         setMessage(data.message || "Profile added successfully!");
+        setAddedName(data.name || "");
         setUrl("");
       } else {
         setStatus("error");
@@ -56,6 +70,7 @@ export default function AddLinkedIn() {
     setTimeout(() => {
       setStatus("idle");
       setMessage("");
+      setAddedName("");
       setUrl("");
     }, 300);
   };
@@ -105,10 +120,18 @@ export default function AddLinkedIn() {
                   </svg>
                 </div>
                 <p className="text-sm text-dex-text font-medium">{message}</p>
-                <p className="text-xs text-dex-text-muted mt-2">Search for them to see their card.</p>
+                {addedName && (
+                  <button
+                    onClick={() => searchForPerson(addedName)}
+                    className="mt-3 text-sm font-medium px-4 py-2 rounded-lg text-white transition-all hover:scale-105 active:scale-95"
+                    style={{ background: "#0A66C2" }}
+                  >
+                    Search for {addedName}
+                  </button>
+                )}
                 <button
-                  onClick={() => { setStatus("idle"); setMessage(""); }}
-                  className="mt-4 text-xs font-mono text-dex-accent hover:underline"
+                  onClick={() => { setStatus("idle"); setMessage(""); setAddedName(""); }}
+                  className="mt-3 block mx-auto text-xs font-mono text-dex-accent hover:underline"
                 >
                   Add another
                 </button>
