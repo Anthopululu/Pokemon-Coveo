@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 
 const BRIGHT_DATA_TOKEN = process.env.BRIGHT_DATA_API_TOKEN;
-const DATASET_ID = "818487d7-8ead-406c-b831-cef0109393ad";
+const DATASET_ID = "gd_l1viktl72bvl7bjuj0";
 const COVEO_ORG_ID = process.env.COVEO_ORG_ID;
 const COVEO_API_KEY = process.env.COVEO_API_KEY;
 const COVEO_SOURCE_ID = process.env.COVEO_SOURCE_ID;
