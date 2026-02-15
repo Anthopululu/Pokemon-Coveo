@@ -72,25 +72,29 @@ async function fetchSnapshot(snapshotId: string): Promise<Record<string, unknown
 
 function mapProfileToCoveo(profile: Record<string, unknown>, linkedinUrl: string) {
   const name = (profile.name as string) || (profile.full_name as string) || "Unknown";
-  const headline = (profile.headline as string) || (profile.job_title as string) || "";
-  const industry = (profile.industry as string) || "";
+  const position = (profile.position as string) || "";
+  const companyName = (profile.current_company_name as string) || "";
+  const headline = (profile.headline as string) || position || "";
   const about = (profile.about as string) || (profile.summary as string) || "";
-  const profilePic = (profile.profile_pic_url as string) || (profile.avatar as string) || "";
+  const location = (profile.location as string) || "";
+
+  const isDefaultAvatar = profile.default_avatar === true;
+  const avatar = (profile.avatar as string) || "";
+  const bannerImage = (profile.banner_image as string) || "";
+  const profilePic = (!isDefaultAvatar && avatar) ? avatar : bannerImage;
+
   const experience = profile.experience;
 
   const types: string[] = [];
-  if (industry) types.push(industry);
-  if (profile.skills && Array.isArray(profile.skills)) {
-    for (const skill of profile.skills.slice(0, 2)) {
-      const skillName = typeof skill === "string" ? skill : (skill as Record<string, unknown>).name as string;
-      if (skillName) types.push(skillName);
-    }
-  }
+  if (companyName) types.push(companyName);
+  if (location) types.push(location);
   if (types.length === 0) types.push("Professional");
 
   let body = "";
   if (headline) body += `${headline}\n\n`;
+  if (companyName && !headline.includes(companyName)) body += `${companyName}\n\n`;
   if (about) body += `${about}\n\n`;
+  if (location) body += `Location: ${location}\n\n`;
   if (experience && Array.isArray(experience)) {
     const recent = experience.slice(0, 3);
     for (const exp of recent) {
@@ -100,6 +104,10 @@ function mapProfileToCoveo(profile: Record<string, unknown>, linkedinUrl: string
       if (title || company) body += `${title} at ${company}\n`;
     }
   }
+
+  const species = headline
+    || (position && companyName ? `${position} at ${companyName}` : position || companyName)
+    || "LinkedIn Professional";
 
   return {
     documentId: `linkedin://${linkedinUrl.replace(/https?:\/\//, "")}`,
@@ -115,7 +123,7 @@ function mapProfileToCoveo(profile: Record<string, unknown>, linkedinUrl: string
     pokemonimage: profilePic,
     pokemonnumber: 0,
     pokemontype: types,
-    pokemonspecies: headline || "LinkedIn Professional",
+    pokemonspecies: species,
     pokemongeneration: "LinkedIn",
     pokemoncategory: "People",
   };
