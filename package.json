@@ -6,22 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "scrape": "tsx scripts/scrape-pokemon.ts",
-    "scrape:single": "tsx scripts/scrape-single.ts",
-    "push": "tsx scripts/push-to-coveo.ts",
-    "index": "npm run scrape && npm run push"
+    "lint": "next lint"
   },
   "dependencies": {
     "@coveo/headless": "^3.42.1",
-    "cheerio": "^1.2.0",
-    "dotenv": "^17.3.1",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
-    "@types/cheerio": "^0.22.35",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -29,7 +22,6 @@
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
