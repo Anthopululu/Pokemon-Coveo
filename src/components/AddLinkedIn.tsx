@@ -27,10 +27,16 @@ export default function AddLinkedIn() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
+  const [searching, setSearching] = useState(false);
+
   const searchForPerson = (name: string) => {
-    searchBox.updateText(name);
-    searchBox.submit();
-    resetAndClose();
+    setSearching(true);
+    setTimeout(() => {
+      searchBox.updateText(name);
+      searchBox.submit();
+      resetAndClose();
+      setSearching(false);
+    }, 5000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,10 +129,18 @@ export default function AddLinkedIn() {
                 {addedName && (
                   <button
                     onClick={() => searchForPerson(addedName)}
-                    className="mt-3 text-sm font-medium px-4 py-2 rounded-lg text-white transition-all hover:scale-105 active:scale-95"
+                    disabled={searching}
+                    className="mt-3 text-sm font-medium px-4 py-2 rounded-lg text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-70 flex items-center gap-2 mx-auto"
                     style={{ background: "#0A66C2" }}
                   >
-                    Search for {addedName}
+                    {searching ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Indexing...
+                      </>
+                    ) : (
+                      <>Search for {addedName}</>
+                    )}
                   </button>
                 )}
                 <button
