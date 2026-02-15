@@ -12,9 +12,17 @@ interface Props {
 }
 
 export default function PokemonCard({ result, index }: Props) {
-  const interactiveResult = useRef(
-    buildInteractiveResult(getSearchEngine(), { options: { result } })
-  ).current;
+  const interactiveResult = useRef<ReturnType<typeof buildInteractiveResult> | null>(null);
+  const [hidden, setHidden] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!interactiveResult.current && !error) {
+    try {
+      interactiveResult.current = buildInteractiveResult(getSearchEngine(), { options: { result } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    }
+  }
 
   const raw = result.raw as Record<string, unknown>;
   const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
@@ -24,7 +32,9 @@ export default function PokemonCard({ result, index }: Props) {
   const generation = raw.pokemongeneration as string;
   const isLinkedIn = generation === "LinkedIn" || raw.pokemoncategory === "People";
 
-  const [hidden, setHidden] = useState(false);
+  if (error) {
+    return <div className="p-4 bg-red-100 rounded text-red-800 text-xs">Card error: {error} | raw: {JSON.stringify(raw).slice(0, 200)}</div>;
+  }
 
   const primaryType = types[0] || "Normal";
   const bgGradient = typeBgGradients[primaryType] || "from-zinc-50 to-stone-100";
@@ -115,9 +125,9 @@ export default function PokemonCard({ result, index }: Props) {
   return (
     <Link
       href={`/pokemon/${slug}`}
-      onClick={() => interactiveResult.select()}
-      onMouseEnter={() => interactiveResult.beginDelayedSelect()}
-      onMouseLeave={() => interactiveResult.cancelPendingSelect()}
+      onClick={() => interactiveResult.current?.select()}
+      onMouseEnter={() => interactiveResult.current?.beginDelayedSelect()}
+      onMouseLeave={() => interactiveResult.current?.cancelPendingSelect()}
     >
       {cardContent}
     </Link>
