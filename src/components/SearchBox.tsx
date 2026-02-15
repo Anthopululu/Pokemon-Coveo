@@ -36,6 +36,20 @@ export default function SearchBox() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const name = (e as CustomEvent).detail?.name;
+      if (name) {
+        setLocalValue(name);
+        setShowDropdown(false);
+        controller.updateText(name);
+        controller.submit();
+      }
+    };
+    window.addEventListener("coveo-search", handler);
+    return () => window.removeEventListener("coveo-search", handler);
+  }, [controller]);
+
   const fetchSuggestions = useCallback(async (query: string) => {
     if (query.length < 2) {
       setSuggestions([]);
