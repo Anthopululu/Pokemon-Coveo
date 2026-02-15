@@ -10,6 +10,12 @@ import Pager from "@/components/Pager";
 import MobileFacets from "@/components/MobileFacets";
 import AIChatPopup from "@/components/AIChatPopup";
 import GenAIAnswer from "@/components/GenAIAnswer";
+import DidYouMean from "@/components/DidYouMean";
+import Tabs from "@/components/Tab";
+import RecentQueries from "@/components/RecentQueries";
+import NotifyTrigger from "@/components/NotifyTrigger";
+import StaticFilter from "@/components/StaticFilter";
+import SearchUrlManager from "@/components/SearchUrlManager";
 
 export default function Home() {
   const [ready, setReady] = useState(false);
@@ -38,7 +44,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative">
-      {/* Top accent bar - Coveo gradient */}
+      <SearchUrlManager />
       <div className="h-1 coveo-gradient" />
 
       <header className="relative border-b border-dex-border/60 bg-dex-surface/80 backdrop-blur-sm">
@@ -59,6 +65,9 @@ export default function Home() {
             </div>
           </div>
           <SearchBox />
+          <div className="mt-4">
+            <Tabs />
+          </div>
         </div>
       </header>
 
@@ -71,11 +80,15 @@ export default function Home() {
               </h2>
               <Facet field="pokemontype" title="Type" />
               <Facet field="pokemongeneration" title="Generation" />
+              <StaticFilter />
+              <RecentQueries />
             </div>
           </aside>
 
           <div className="flex-1 min-w-0">
             <GenAIAnswer />
+            <NotifyTrigger />
+            <DidYouMean />
             <MobileFacets />
             <ResultList />
             <Pager />

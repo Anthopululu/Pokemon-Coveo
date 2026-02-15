@@ -5,6 +5,9 @@ import { buildResultList } from "@coveo/headless";
 import { getSearchEngine } from "@/lib/coveo-engine";
 import { useCoveoController } from "@/hooks/useCoveoController";
 import PokemonCard from "./PokemonCard";
+import QuerySummary from "./QuerySummary";
+import Sort from "./Sort";
+import ResultsPerPage from "./ResultsPerPage";
 
 export default function ResultList() {
   const resultList = useRef(
@@ -18,20 +21,17 @@ export default function ResultList() {
     })
   ).current;
 
-  const engine = getSearchEngine();
   const { state } = useCoveoController(resultList);
-  const searchState = engine.state.search;
-  const query = engine.state.query?.q;
 
   return (
     <div>
-      {searchState && (
-        <p className="text-xs font-mono text-dex-text-muted mb-5">
-          {state.results.length} of {searchState.response?.totalCountFiltered || 0} results
-          {query ? <> for <span className="text-dex-text-secondary">&ldquo;{query}&rdquo;</span></> : null}
-          {searchState.duration ? <span className="text-dex-text-muted/60"> &middot; {(searchState.duration / 1000).toFixed(2)}s</span> : null}
-        </p>
-      )}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <QuerySummary />
+        <div className="flex items-center gap-4">
+          <ResultsPerPage />
+          <Sort />
+        </div>
+      </div>
 
       {state.results.length === 0 && !state.isLoading && (
         <div className="text-center py-20">
