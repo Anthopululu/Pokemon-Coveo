@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { buildSearchBox } from "@coveo/headless";
+import { loadQueryActions, loadSearchActions, loadSearchAnalyticsActions } from "@coveo/headless";
 import { getSearchEngine } from "@/lib/coveo-engine";
 
 export default function AddLinkedIn() {
@@ -11,10 +11,6 @@ export default function AddLinkedIn() {
   const [message, setMessage] = useState("");
   const [addedName, setAddedName] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
-
-  const searchBox = useRef(
-    buildSearchBox(getSearchEngine(), { options: { numberOfSuggestions: 0 } })
-  ).current;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -32,8 +28,12 @@ export default function AddLinkedIn() {
   const searchForPerson = (name: string) => {
     setSearching(true);
     setTimeout(() => {
-      searchBox.updateText(name);
-      searchBox.submit();
+      const engine = getSearchEngine();
+      const { updateQuery } = loadQueryActions(engine);
+      const { executeSearch } = loadSearchActions(engine);
+      const { logSearchFromLink } = loadSearchAnalyticsActions(engine);
+      engine.dispatch(updateQuery({ q: name }));
+      engine.dispatch(executeSearch(logSearchFromLink()));
       resetAndClose();
       setSearching(false);
     }, 5000);
