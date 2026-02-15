@@ -25,6 +25,7 @@ export default function SearchBox() {
     const val = e.target.value;
     setLocalValue(val);
     controller.updateText(val);
+    controller.showSuggestions();
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       controller.submit();
