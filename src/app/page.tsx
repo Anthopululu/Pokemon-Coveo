@@ -1,22 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSearchEngine } from "@/lib/coveo-engine";
+import { getSearchEngine } from "@/lib/coveo";
 import { loadSearchActions, loadSearchAnalyticsActions } from "@coveo/headless";
 import SearchBox from "@/components/SearchBox";
 import ResultList from "@/components/ResultList";
-import Facet from "@/components/Facet";
-import Pager from "@/components/Pager";
-import MobileFacets from "@/components/MobileFacets";
+import Facet, { MobileFacets } from "@/components/Facet";
 import AIChatPopup from "@/components/AIChatPopup";
 import AddLinkedIn from "@/components/AddLinkedIn";
-import GenAIAnswer from "@/components/GenAIAnswer";
-import DidYouMean from "@/components/DidYouMean";
-
-import RecentQueries from "@/components/RecentQueries";
-import NotifyTrigger from "@/components/NotifyTrigger";
-import StaticFilter from "@/components/StaticFilter";
-import SearchUrlManager from "@/components/SearchUrlManager";
+import {
+  GenAIAnswer,
+  DidYouMean,
+  NotifyTrigger,
+  Pager,
+  RecentQueries,
+  StaticFilter,
+  SearchUrlManager,
+} from "@/components/SearchWidgets";
 
 export default function Home() {
   const [ready, setReady] = useState(false);

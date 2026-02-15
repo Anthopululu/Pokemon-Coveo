@@ -8,7 +8,7 @@ import {
   loadQueryActions,
   loadSearchAnalyticsActions,
 } from "@coveo/headless";
-import { coveoConfig } from "@/lib/coveo-config";
+import { coveoConfig } from "@/lib/coveo";
 import { retrievePassages } from "@/lib/passage-retrieval";
 
 interface ChatMessage {

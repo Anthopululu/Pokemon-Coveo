@@ -10,9 +10,9 @@ import {
   loadQueryActions,
   loadSearchAnalyticsActions,
 } from "@coveo/headless";
-import { coveoConfig } from "@/lib/coveo-config";
+import { coveoConfig } from "@/lib/coveo";
 import { typeColors, typeHex, typeBgGradients } from "@/lib/pokemon-utils";
-import PassageHighlights from "@/components/PassageHighlights";
+import { PassageHighlights } from "@/components/SearchWidgets";
 
 interface PokemonData {
   title: string;

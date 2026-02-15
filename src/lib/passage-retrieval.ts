@@ -1,4 +1,4 @@
-import { coveoConfig } from "./coveo-config";
+import { coveoConfig } from "./coveo";
 
 interface PassageDocument {
   title: string;

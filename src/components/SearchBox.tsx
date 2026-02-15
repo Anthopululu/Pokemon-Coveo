@@ -2,9 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { buildSearchBox } from "@coveo/headless";
-import { getSearchEngine } from "@/lib/coveo-engine";
-import { useCoveoController } from "@/hooks/useCoveoController";
-import { coveoConfig } from "@/lib/coveo-config";
+import { getSearchEngine, useCoveoController, coveoConfig } from "@/lib/coveo";
 
 interface TitleSuggestion {
   title: string;
