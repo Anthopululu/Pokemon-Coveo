@@ -18,7 +18,7 @@ export default function SearchBox() {
     })
   ).current;
 
-  const { state } = useCoveoController(controller);
+  useCoveoController(controller);
   const [localValue, setLocalValue] = useState("");
   const [suggestions, setSuggestions] = useState<TitleSuggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
