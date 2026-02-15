@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Result, buildInteractiveResult } from "@coveo/headless";
 import { getSearchEngine } from "@/lib/coveo-engine";
-import { loadSearchActions, loadSearchAnalyticsActions } from "@coveo/headless";
 import { typeColors, typeHex, typeBgGradients } from "@/lib/pokemon-utils";
 
 interface Props {
@@ -17,7 +16,7 @@ export default function PokemonCard({ result, index }: Props) {
     buildInteractiveResult(getSearchEngine(), { options: { result } })
   ).current;
 
-  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   const raw = result.raw as Record<string, unknown>;
   const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
@@ -32,30 +31,21 @@ export default function PokemonCard({ result, index }: Props) {
   const accentColor = typeHex[primaryType] || "#a1a1aa";
   const slug = result.title.toLowerCase().replace(/\s+/g, "-");
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (deleting) return;
 
-    setDeleting(true);
-    try {
-      const documentId = `linkedin://${(result.clickUri || result.uri).replace(/https?:\/\//, "")}`;
-      const res = await fetch("/api/linkedin/add", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentId }),
-      });
+    setDeleted(true);
 
-      if (res.ok) {
-        const engine = getSearchEngine();
-        const { executeSearch } = loadSearchActions(engine);
-        const { logSearchFromLink } = loadSearchAnalyticsActions(engine);
-        engine.dispatch(executeSearch(logSearchFromLink()));
-      }
-    } catch {
-      setDeleting(false);
-    }
+    const documentId = `linkedin://${(result.clickUri || result.uri).replace(/https?:\/\//, "")}`;
+    fetch("/api/linkedin/add", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId }),
+    });
   };
+
+  if (deleted) return null;
 
   const cardContent = (
     <div
@@ -106,17 +96,12 @@ export default function PokemonCard({ result, index }: Props) {
           {isLinkedIn && (
             <button
               onClick={handleDelete}
-              disabled={deleting}
-              className="ml-auto text-dex-text-muted/40 hover:text-red-500 transition-colors disabled:opacity-30"
+              className="ml-auto text-dex-text-muted/40 hover:text-red-500 transition-colors"
               title="Remove from Pokedex"
             >
-              {deleting ? (
-                <div className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              )}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             </button>
           )}
         </div>
