@@ -8,12 +8,11 @@ I went with Headless over Atomic because I wanted full control over the UI. The 
 
 - Full-text search across 1025 Pokemon with Coveo ranking
 - Facets for Type and Generation
-- Pokemon cards with official artwork
-- AI-generated answers (Coveo RGA) inline on the search page
-- Floating AI chat popup powered by RGA + Passage Retrieval as fallback
+- Pokemon cards with official artwork and type-colored accents
+- Floating AI chat popup with RAG (Coveo search + Groq Llama 3.3 70B for answer generation)
+- Passage Retrieval API feeding context into the chat and on detail pages
 - Query suggestions / type-ahead
 - Detail pages with base stats, abilities, height/weight
-- Passage Retrieval API on detail pages and in the chat
 - Responsive layout (mobile + desktop)
 
 ## Stack
@@ -22,6 +21,7 @@ I went with Headless over Atomic because I wanted full control over the UI. The 
 - Coveo Headless for search state management
 - Coveo Push API for indexing
 - Coveo Passage Retrieval API for text chunk extraction
+- Groq API (Llama 3.3 70B) for RAG answer generation in the chat
 - cheerio for scraping pokemondb.net
 
 ## Setup
@@ -38,6 +38,7 @@ COVEO_API_KEY=your-push-api-key
 COVEO_SOURCE_ID=your-source-id
 NEXT_PUBLIC_COVEO_ORG_ID=your-org-id
 NEXT_PUBLIC_COVEO_SEARCH_TOKEN=your-search-api-key
+GROQ_API_KEY=your-groq-api-key
 ```
 
 ### Coveo fields
@@ -75,7 +76,25 @@ The push script (`scripts/push-to-coveo.ts`) takes the scraped JSON and sends ea
 
 On the frontend, each Coveo Headless controller (search box, facets, result list, etc.) is wired up through a `useCoveoController` hook that handles subscribe/unsubscribe. The detail page spins up its own engine instance to query one Pokemon without touching the main search state.
 
-The floating AI chat (bottom-right) creates a dedicated engine per query. It tries three things in order: Coveo RGA for a generated answer, then Passage Retrieval for sourced quotes, then a basic fallback from search results. Passages show up as cited sources under the answer, so the user can see exactly where the information came from.
+### AI chat
+
+The floating chat (bottom-right) is a RAG pipeline that works in three steps:
+
+1. Runs a Coveo search and Passage Retrieval in parallel to gather context
+2. Sends the query + context to Groq's Llama 3.3 70B via a Next.js API route (`/api/chat`)
+3. Streams the response back token by token
+
+The API route is a thin proxy that forwards to Groq's OpenAI-compatible endpoint. Streaming is SSE (Server-Sent Events), parsed client-side chunk by chunk.
+
+If the LLM call fails, a basic fallback formats the top Coveo result into a sentence.
+
+### Passage Retrieval
+
+Instead of returning full documents, this API returns the specific text chunks that answer a query. Headless doesn't have a controller for it, so I called the REST endpoint directly (`/rest/search/v3/passages/retrieve`).
+
+I use it in two places:
+1. As context for the RAG chat, so the LLM has sourced text to work with.
+2. On the detail page to surface relevant passages about each Pokemon.
 
 ## What I learned about Coveo
 
@@ -91,23 +110,6 @@ Think of it like Redux but for search. Each controller (search box, facet, pager
 
 I made a `useCoveoController` hook to avoid duplicating the subscribe/unsubscribe logic across components. Keeps things clean.
 
-### RGA (Relevance Generative Answering)
+### Query pipelines and ranking
 
-Coveo's GenAI answer feature. You create an RGA model and a Semantic Encoder in the admin, associate both to your query pipeline, and call `buildGeneratedAnswer` on the frontend. It streams the answer and shows citations.
-
-I use it in two places: inline on the search page (the blue box that appears after a query), and in the floating AI chat where it powers the conversational responses.
-
-### Passage Retrieval API
-
-Instead of returning full documents, this API returns the specific text chunks that answer a query. Headless doesn't have a controller for it, so I called the REST endpoint directly (`/rest/search/v3/passages/retrieve`).
-
-I used it in two places:
-
-1. On the detail page to surface relevant passages about each Pokemon.
-2. In the AI chat as a fallback when RGA doesn't return a generated answer. Instead of a generic "here are some results", the chat shows the actual passage text with a source citation. It's basically a lightweight RAG pipeline: query -> passage retrieval -> format as answer with sources.
-
-**Where I'd use this with a real customer:** imagine a B2B company like Schneider Electric with thousands of technical product datasheets across multiple languages. A field engineer on-site needs to know the exact wiring spec for a specific circuit breaker model. With traditional search, they get a link to a 200-page PDF. With Passage Retrieval, they get the exact paragraph: "The Compact NSXm 36 kA requires 2.5mm2 copper conductors, torque 2.5 N.m". That's the difference between 15 seconds and 15 minutes. You could integrate this into their existing Salesforce Service Cloud portal, their mobile field app, or even a WhatsApp bot for technicians. The same pattern works for pharma (drug interaction lookups), legal (clause extraction from contracts), or any industry where people search through dense documentation daily.
-
-### Query pipelines
-
-This is where everything comes together on the Coveo side. The ML models (RGA, Query Suggestions, Semantic Encoder) are all associated to a pipeline, and the frontend connects to it via the `searchHub`. I only used one pipeline here but you'd set up different ones for different contexts (internal search vs customer-facing, etc.).
+The ML models (Query Suggestions, Semantic Encoder) are associated to a pipeline, and the frontend connects via `searchHub`. I also added a QRE (Query Ranking Expression) in the pipeline to boost well-known Pokemon (low Pokedex numbers) so that searching "pika" returns Pikachu before Pikipek. Without it, Coveo's semantic/vector search sometimes ranked less popular Pokemon higher because of closer embedding similarity.
