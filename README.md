@@ -53,10 +53,10 @@ I also added a QRE (Query Ranking Expression) in the Coveo pipeline: `@pokemonnu
 
 The app uses 14 controllers, 4 utility functions, 2 action loaders, and 1 direct REST call. Quick distinction:
 
-- **Controller** — has its own state that updates over time, you subscribe to it (like `buildFacet` which tracks checked values and counts)
-- **Utility function** — returns a config object and that's it, no state (like `buildFieldSortCriterion`)
-- **Action loader** — gives you an action to dispatch on the engine, one-shot (like `loadSearchActions`)
-- **REST call** — plain `fetch()` to a Coveo API that Headless doesn't cover
+- **Controller** — a live object that keeps track of things and updates on its own. `buildFacet` knows which filters are checked and how many results each one has, and it stays in sync as the user searches.
+- **Utility function** — a helper that builds a config object. You call it once, get a value back, pass it somewhere, done. Nothing lives after that.
+- **Action loader** — gives you a function you can fire once to make something happen, like triggering the first search when the page loads.
+- **REST call** — a regular HTTP request to a Coveo endpoint that Headless doesn't have a controller for.
 
 ### Controllers
 
