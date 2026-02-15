@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
-import { Result } from "@coveo/headless";
+import { Result, buildInteractiveResult } from "@coveo/headless";
+import { getSearchEngine } from "@/lib/coveo-engine";
 import { typeColors, typeHex, typeBgGradients } from "@/lib/pokemon-utils";
 
 interface Props {
@@ -10,6 +12,10 @@ interface Props {
 }
 
 export default function PokemonCard({ result, index }: Props) {
+  const interactiveResult = useRef(
+    buildInteractiveResult(getSearchEngine(), { options: { result } })
+  ).current;
+
   const raw = result.raw as Record<string, unknown>;
   const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
   const image = raw.pokemonimage as string;
@@ -21,7 +27,12 @@ export default function PokemonCard({ result, index }: Props) {
   const slug = result.title.toLowerCase().replace(/\s+/g, "-");
 
   return (
-    <Link href={`/pokemon/${slug}`}>
+    <Link
+      href={`/pokemon/${slug}`}
+      onClick={() => interactiveResult.select()}
+      onMouseEnter={() => interactiveResult.beginDelayedSelect()}
+      onMouseLeave={() => interactiveResult.cancelPendingSelect()}
+    >
       <div
         className="card-animate bg-dex-surface rounded-xl border border-dex-border/60 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group shadow-sm"
         style={{ animationDelay: `${index * 50}ms` }}
@@ -34,7 +45,6 @@ export default function PokemonCard({ result, index }: Props) {
           e.currentTarget.style.transform = "translateY(0)";
         }}
       >
-        {/* Type accent line */}
         <div className="h-[2px]" style={{ background: `linear-gradient(90deg, ${accentColor}, ${accentColor}40)` }} />
 
         <div className={`bg-gradient-to-br ${bgGradient} p-4 flex items-center justify-center h-44 relative overflow-hidden`}>
