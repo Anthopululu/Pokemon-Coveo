@@ -109,22 +109,6 @@ export default function PokemonCard({ result, index }: Props) {
     </div>
   );
 
-  if (isLinkedIn) {
-    const linkedinUrl = result.clickUri || result.uri;
-    return (
-      <a
-        href={linkedinUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => interactiveResult.select()}
-        onMouseEnter={() => interactiveResult.beginDelayedSelect()}
-        onMouseLeave={() => interactiveResult.cancelPendingSelect()}
-      >
-        {cardContent}
-      </a>
-    );
-  }
-
   return (
     <Link
       href={`/pokemon/${slug}`}
