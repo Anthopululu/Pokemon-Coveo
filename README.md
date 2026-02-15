@@ -1,63 +1,82 @@
 # Pokedex Search
 
-A Pokemon search app I built for the Coveo Pre-Sales Challenge. I indexed all 1025 Pokemon from pokemondb.net into Coveo Cloud and built a custom search experience using Coveo Headless.
+A Pokemon search app built for the Coveo Pre-Sales Challenge. All 1025 Pokemon from pokemondb.net are indexed into Coveo Cloud, with a fully custom search experience built on Coveo Headless and React.
 
-I went with Headless over Atomic because I wanted full control over the UI. The idea was to make it feel like an actual Pokedex, not just a generic search page.
+I chose Headless over Atomic for full UI control. The goal was to make it feel like an actual Pokedex, not a generic search page.
 
-## What it does
+**Live app:** [pokedexcoveo.com](https://pokedexcoveo.com)
 
-- Full-text search across 1025 Pokemon with Coveo ranking
-- Facets for Type and Generation
-- Pokemon cards with official artwork and type-colored accents
-- Floating AI chat popup with RAG (Coveo search + Groq Llama 3.3 70B for answer generation)
-- Passage Retrieval API feeding context into the chat and on detail pages
-- Query suggestions / type-ahead
-- Detail pages with base stats, abilities, height/weight
-- Responsive layout (mobile + desktop)
+---
 
-## Coveo Headless components used
+## Challenge checklist
 
-The app uses 15 Coveo Headless controllers. Here's what each one does and why I picked it.
+### Essential
 
-**Search engine and core search**
+- [x] Accept Cloud Organization invitation
+- [x] Install Coveo Headless locally (chose Headless for full React control)
+- [x] Index pokemondb.net — used the Push API to index all 1025 Pokemon with structured metadata (types, generation, stats, abilities, images)
+- [x] Connect search page to Coveo Cloud endpoint
+- [x] Facet to filter by Pokemon Type
+- [x] Facet to filter by Pokemon Generation
+- [x] Display Pokemon picture directly in search results
 
-- `buildSearchEngine` — The engine itself. Every controller plugs into it and shares the same search state. One engine, one source of truth.
-- `buildSearchBox` — Handles the search input, debounced queries, and query suggestions. Configured with 8 suggestions and highlight matching. This is what triggers every search.
-- `buildResultList` — Fetches and displays the results. I specify which custom fields to include (`pokemontype`, `pokemonnumber`, etc.) so the cards have all the data they need without extra calls.
-- `buildQuerySummary` — Gives a clean summary line: "Results 1-10 of 152 for Pikachu - 0.23s". Replaces the manual string formatting I had before.
+### Intermediate
 
-**Filtering and navigation**
+- [x] Code hosted on GitHub
+- [x] App hosted and accessible — deployed on AWS EC2 at [pokedexcoveo.com](https://pokedexcoveo.com)
 
-- `buildFacet` — Used twice: one for Pokemon Type, one for Generation. Standard checkbox facets in the sidebar.
-- `buildTab` — Tabs across the top (All, Gen 1-5, Legendary). Each tab applies a constant filter expression like `@pokemongeneration==1`. Faster than clicking through facets for common filters.
-- `buildStaticFilter` — Predefined filters in the sidebar (Starter, Legendary, Mythical). Unlike facets, these use hardcoded expressions that I wrote, not values from the index.
-- `buildSort` — Dropdown to sort by relevance, Pokedex number (ascending/descending), or name A-Z. Defaults to relevance.
+### Advanced
 
-**Results and pagination**
+- [x] Coveo RGA deployed — AI-generated answers appear at the top of search results via `buildGeneratedAnswer`
+- [x] Type-ahead / autocomplete — the Coveo Query Suggest ML model is empty (not enough search traffic to train), so I built a custom autocomplete that queries the Coveo Search API and suggests matching Pokemon titles in real-time
+- [x] Pokemon Detail Page — dedicated page for each Pokemon with stats, abilities, type, height/weight, and official artwork
 
-- `buildPager` — Page navigation at the bottom. Previous/next buttons and page numbers.
-- `buildResultsPerPage` — Lets the user choose 10, 25, or 50 results per page. Sits next to the sort dropdown.
-- `buildInteractiveResult` — Wraps each Pokemon card. Tracks clicks and hover intent, which feeds data into the ART model. This is what teaches Coveo which results are actually useful for a given query.
+### Bonus
 
-**AI and corrections**
+- [x] Built on the Passage Retrieval API — used in two places:
+  1. As context for the RAG chat (feeds relevant text chunks to the LLM)
+  2. On detail pages to surface specific passages about each Pokemon
 
-- `buildGeneratedAnswer` — The Coveo RGA component. Displays an AI-generated answer at the top of the results, with citations pointing to the source documents. No custom prompt, no external API — Coveo handles the LLM call internally.
-- `buildDidYouMean` — Spelling correction. If Coveo thinks the query is misspelled and gets poor results, it suggests or auto-corrects. Works for things like "drgaon type" -> "dragon type".
+---
 
-**UX and state management**
+## Beyond the requirements
 
-- `buildRecentQueriesList` — Keeps the last 5 searches in the sidebar. Clicking one re-runs that search. Stored client-side, resets on page refresh.
-- `buildNotifyTrigger` — Displays notifications configured in the query pipeline. If I set up a trigger in the Coveo admin (e.g., show a message when someone searches "Missingno"), this component renders it.
-- `buildUrlManager` — Syncs search state with the URL hash. Selecting a facet or changing the query updates the URL, so searches can be shared via link.
+Features I added that were not part of the challenge:
 
-## Coveo ML models
+- **Floating AI chat with RAG pipeline** — a chat popup (bottom-right) that runs a Coveo search + Passage Retrieval in parallel, then sends the context + conversation history to Groq's Llama 3.3 70B for answer generation. Streams responses token by token via SSE.
+- **15 Coveo Headless controllers** — went deep into the Headless library: `buildSearchBox`, `buildResultList`, `buildFacet`, `buildSort`, `buildPager`, `buildResultsPerPage`, `buildInteractiveResult`, `buildGeneratedAnswer`, `buildDidYouMean`, `buildRecentQueriesList`, `buildNotifyTrigger`, `buildUrlManager`, `buildQuerySummary`, `buildStaticFilter`, `buildTab`
+- **URL state sync** — search state is synced to the URL via `buildUrlManager`, so searches can be shared via link
+- **Did You Mean** — spelling correction (e.g. "drgaon type" -> "dragon type")
+- **Recent Queries** — last 5 searches displayed in the sidebar for quick re-runs
+- **Static Filters** — predefined sidebar filters for Starter, Legendary, and Mythical Pokemon
+- **Sort options** — sort by relevance, Pokedex number, or name A-Z
+- **Results per page** — toggle between 10, 25, or 50 results
+- **Interactive Results** — click tracking via `buildInteractiveResult` to feed the ART model
+- **Notify Triggers** — pipeline-configured notifications rendered via `buildNotifyTrigger`
+- **Type-colored cards** — each Pokemon card has accent colors matching its primary type
+- **Responsive layout** — works on mobile and desktop
+- **Query Ranking Expression** — added a QRE in the pipeline to boost well-known Pokemon (low Pokedex numbers) so "pika" returns Pikachu before Pikipek
 
-Four models are associated with the PokemonSearch pipeline:
+---
 
-- **Semantic Encoder** — Encodes queries and documents into vectors for semantic search. Makes "fire breathing lizard" return Charizard even though those exact words aren't in the document.
-- **Relevance Generative Answering (RGA)** — Powers the AI Answer block via `buildGeneratedAnswer`. Coveo selects relevant passages, sends them to a GPT model, and streams a grounded answer back.
-- **Query Suggestions** — Learns from search history to suggest queries as the user types. Needs usage data to train.
-- **Automatic Relevance Tuning (ART)** — Learns from click data (via `buildInteractiveResult`) to re-rank results. The more users click on Pikachu when searching "electric mouse", the higher it climbs.
+## What I learned about Coveo
+
+**Push API vs Web Crawler** — I went with the Push API for full control over indexed metadata. Every Pokemon has properly typed fields (multi-value for types/abilities, integer for Pokedex number) instead of relying on Coveo to parse raw HTML. One gotcha: the API key must be generated from the Push source itself in the admin console — a manually created key with the same permissions didn't work.
+
+**Headless as a state manager** — Headless works like Redux for search. Each controller has its own state and actions, and they all share the same engine. When you select a facet, the result list, query summary, and pager all update automatically. I wrote a thin `useCoveoController` hook to handle subscribe/unsubscribe across all components.
+
+**Query pipelines and ML models** — Four models are associated with my PokemonSearch pipeline: Semantic Encoder, RGA, Query Suggestions, and ART. The pipeline connects to the frontend via `searchHub`. The QRE I added to boost popular Pokemon made a real difference in result quality.
+
+**Passage Retrieval API** — not part of Headless, so I called the REST endpoint directly (`/rest/search/v3/passages/retrieve`). Returns specific text chunks instead of full documents, which made the RAG chat much more accurate.
+
+---
+
+## What didn't work
+
+- **Query Suggest ML model** — the model stays empty because there isn't enough search traffic to train it. Coveo needs real user query data to generate suggestions. I worked around this by building a custom autocomplete that uses the Search API to suggest matching titles directly.
+- **Push API key generation** — spent time debugging why my manually created API key wasn't working for the Push API. Turns out you have to generate it from the Push source page itself, not from the general API key settings.
+
+---
 
 ## Stack
 
@@ -66,6 +85,7 @@ Four models are associated with the PokemonSearch pipeline:
 - Coveo Push API for indexing
 - Coveo Passage Retrieval API for text chunk extraction
 - Groq API (Llama 3.3 70B) for RAG answer generation in the chat
+- AWS EC2 + PM2 + Nginx for hosting
 
 ## Setup
 
@@ -103,41 +123,3 @@ These need to be created in the Coveo admin (Content > Fields):
 ```bash
 npm run dev
 ```
-
-## How it works
-
-On the frontend, each Coveo Headless controller is wired up through a `useCoveoController` hook that handles subscribe/unsubscribe. The detail page spins up its own engine instance to query one Pokemon without touching the main search state.
-
-### AI chat
-
-The floating chat (bottom-right) is a RAG pipeline:
-
-1. Runs a Coveo search and Passage Retrieval in parallel to gather context
-2. Sends the query + context + conversation history to Groq's Llama 3.3 70B via a Next.js API route (`/api/chat`)
-3. Streams the response back token by token
-
-The API route keeps the Groq key server-side. Streaming uses SSE, parsed client-side chunk by chunk. The chat remembers context across messages (up to 10 messages of history).
-
-### Passage Retrieval
-
-Instead of returning full documents, this API returns the specific text chunks that answer a query. Headless doesn't have a controller for it, so I called the REST endpoint directly (`/rest/search/v3/passages/retrieve`).
-
-Used in two places:
-1. As context for the RAG chat
-2. On the detail page to surface relevant passages about each Pokemon
-
-## What I learned about Coveo
-
-### Push API vs Web Crawler
-
-I went with the Push API. The Web Crawler would have been simpler to set up but I wanted control over what gets indexed and how the metadata is structured. Every Pokemon has properly typed fields (multi-value for types and abilities, integer for Pokedex number) instead of relying on Coveo to figure that out from raw HTML.
-
-One thing that got me: the API key has to be generated from the Push source itself in the admin console. A manually created API key with the same permissions didn't work.
-
-### Headless
-
-Think of it like Redux but for search. Each controller has its own state and actions, and they all share the same engine. When you select a facet, the result list, query summary, and pager all update automatically. The `useCoveoController` hook avoids duplicating subscribe/unsubscribe across components.
-
-### Query pipelines and ranking
-
-The ML models are associated to a pipeline, and the frontend connects via `searchHub`. I also added a QRE (Query Ranking Expression) in the pipeline to boost well-known Pokemon (low Pokedex numbers) so that searching "pika" returns Pikachu before Pikipek. Without it, semantic search sometimes ranked less popular Pokemon higher because of closer embedding similarity.
