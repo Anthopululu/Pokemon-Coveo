@@ -37,8 +37,11 @@ export default function PokemonCard({ result, index }: Props) {
 
   const isDeleted = () => {
     try {
-      const deleted = JSON.parse(sessionStorage.getItem("deletedLinkedIn") || "[]");
-      return deleted.includes(documentId);
+      const entries = JSON.parse(sessionStorage.getItem("deletedLinkedIn") || "[]");
+      const fiveMin = 5 * 60 * 1000;
+      return entries.some((e: { id: string; at: number } | string) =>
+        typeof e === "string" ? false : e.id === documentId && Date.now() - e.at < fiveMin
+      );
     } catch { return false; }
   };
 
@@ -47,9 +50,9 @@ export default function PokemonCard({ result, index }: Props) {
     e.stopPropagation();
 
     try {
-      const deleted = JSON.parse(sessionStorage.getItem("deletedLinkedIn") || "[]");
-      deleted.push(documentId);
-      sessionStorage.setItem("deletedLinkedIn", JSON.stringify(deleted));
+      const entries = JSON.parse(sessionStorage.getItem("deletedLinkedIn") || "[]");
+      entries.push({ id: documentId, at: Date.now() });
+      sessionStorage.setItem("deletedLinkedIn", JSON.stringify(entries));
     } catch {}
 
     fetch("/api/linkedin/add", {
