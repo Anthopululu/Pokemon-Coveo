@@ -2,20 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f8fafc;
-  color: #1e293b;
+:root {
+  --dex-bg: #faf9f7;
+  --dex-surface: #ffffff;
+  --dex-elevated: #f3f2ef;
+  --dex-border: #e5e2dc;
+  --dex-text: #1a1a1a;
+  --dex-text-secondary: #555555;
+  --dex-text-muted: #999999;
+  --dex-accent: #f97316;
+  --dex-accent-hover: #ea580c;
+  --dex-accent-subtle: rgba(249, 115, 22, 0.06);
+  --dex-accent-glow: rgba(249, 115, 22, 0.15);
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #f1f5f9; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+body {
+  background: var(--dex-bg);
+  color: var(--dex-text);
+}
 
+/* Subtle noise overlay for texture */
+.noise {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d5d2cc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #b5b2ac; }
+
+/* Stat bar animation */
 @keyframes fillBar {
   from { width: 0%; }
 }
 .stat-bar {
-  animation: fillBar 0.6s ease-out;
+  animation: fillBar 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Card entrance animation */
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.card-animate {
+  animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Chat slide-up */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Glow pulse for the chat button */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(249, 115, 22, 0.25); }
+}
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Focus ring style */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--dex-accent);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(249, 115, 22, 0.2);
+  color: #1a1a1a;
 }
