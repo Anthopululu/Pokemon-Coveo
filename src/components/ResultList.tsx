@@ -15,7 +15,7 @@ export default function ResultList() {
       options: {
         fieldsToInclude: [
           "pokemontype", "pokemongeneration", "pokemonimage",
-          "pokemonnumber", "pokemonspecies",
+          "pokemonnumber", "pokemonspecies", "pokemoncategory",
         ],
       },
     })
