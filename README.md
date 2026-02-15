@@ -45,7 +45,7 @@ A floating chat in the bottom-right corner. It runs a Coveo search and Passage R
 
 URL sync with `buildUrlManager` so you can share a search by copying the URL. Spelling correction with `buildDidYouMean` (try typing "drgaon type"). Recent queries in the sidebar via `buildRecentQueriesList`. Static filters for Starter/Legendary/Mythical Pokemon. Sort by relevance, Pokedex number, or name. Results per page toggle (10/25/50). Click tracking via `buildInteractiveResult` to feed Coveo's ART model. Each Pokemon card has accent colors based on its primary type.
 
-I also added a QRE (Query Ranking Expression) in the Coveo pipeline to boost well-known Pokemon. Without it, searching "pika" sometimes returned Pikipek before Pikachu because the embeddings were close. The QRE gives a score boost to lower Pokedex numbers, which fixed that.
+I also added a QRE (Query Ranking Expression) in the Coveo pipeline: `@pokemonnumber<200` with a +7000 score boost. It gives a ranking advantage to the first 200 Pokemon (Gen 1 + part of Gen 2), which are generally the most searched. Without it, searching "pika" returned Pikipek (#731) close to Pikachu (#25) because their embeddings were similar. With the QRE, Pikachu scores 8007 and Pikipek drops to 1678. Not a perfect proxy for popularity, but good enough for this use case.
 
 ---
 
