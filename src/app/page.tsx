@@ -11,7 +11,7 @@ import MobileFacets from "@/components/MobileFacets";
 import AIChatPopup from "@/components/AIChatPopup";
 import GenAIAnswer from "@/components/GenAIAnswer";
 import DidYouMean from "@/components/DidYouMean";
-import Tabs from "@/components/Tab";
+
 import RecentQueries from "@/components/RecentQueries";
 import NotifyTrigger from "@/components/NotifyTrigger";
 import StaticFilter from "@/components/StaticFilter";
@@ -65,9 +65,8 @@ export default function Home() {
             </div>
           </div>
           <SearchBox />
-          <div className="mt-4">
-            <Tabs />
-          </div>
+
+
         </div>
       </header>
 
