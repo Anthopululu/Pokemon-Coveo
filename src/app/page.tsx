@@ -9,6 +9,7 @@ import Facet from "@/components/Facet";
 import Pager from "@/components/Pager";
 import MobileFacets from "@/components/MobileFacets";
 import AIChatPopup from "@/components/AIChatPopup";
+import GenAIAnswer from "@/components/GenAIAnswer";
 
 export default function Home() {
   const [ready, setReady] = useState(false);
@@ -74,6 +75,7 @@ export default function Home() {
           </aside>
 
           <div className="flex-1 min-w-0">
+            <GenAIAnswer />
             <MobileFacets />
             <ResultList />
             <Pager />
