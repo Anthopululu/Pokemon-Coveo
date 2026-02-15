@@ -150,6 +150,35 @@ async function pushToCoveo(document: ReturnType<typeof mapProfileToCoveo>) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  try {
+    const { documentId } = await req.json();
+
+    if (!documentId) {
+      return Response.json({ error: "Missing documentId" }, { status: 400 });
+    }
+
+    const url = `https://api.cloud.coveo.com/push/v1/organizations/${COVEO_ORG_ID}/sources/${COVEO_SOURCE_ID}/documents?documentId=${encodeURIComponent(documentId)}`;
+
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${COVEO_API_KEY}`,
+      },
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Coveo delete failed: ${err}`);
+    }
+
+    return Response.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return Response.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { url: linkedinUrl } = await req.json();

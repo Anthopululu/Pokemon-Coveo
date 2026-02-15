@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Result, buildInteractiveResult } from "@coveo/headless";
 import { getSearchEngine } from "@/lib/coveo-engine";
+import { loadSearchActions, loadSearchAnalyticsActions } from "@coveo/headless";
 import { typeColors, typeHex, typeBgGradients } from "@/lib/pokemon-utils";
 
 interface Props {
@@ -11,12 +12,12 @@ interface Props {
   index: number;
 }
 
-const LINKEDIN_BLUE = "#0A66C2";
-
 export default function PokemonCard({ result, index }: Props) {
   const interactiveResult = useRef(
     buildInteractiveResult(getSearchEngine(), { options: { result } })
   ).current;
+
+  const [deleting, setDeleting] = useState(false);
 
   const raw = result.raw as Record<string, unknown>;
   const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
@@ -27,13 +28,38 @@ export default function PokemonCard({ result, index }: Props) {
   const isLinkedIn = generation === "LinkedIn" || raw.pokemoncategory === "People";
 
   const primaryType = types[0] || "Normal";
-  const bgGradient = isLinkedIn ? "from-sky-50 to-blue-50" : (typeBgGradients[primaryType] || "from-zinc-50 to-stone-100");
-  const accentColor = isLinkedIn ? LINKEDIN_BLUE : (typeHex[primaryType] || "#a1a1aa");
+  const bgGradient = typeBgGradients[primaryType] || "from-zinc-50 to-stone-100";
+  const accentColor = typeHex[primaryType] || "#a1a1aa";
   const slug = result.title.toLowerCase().replace(/\s+/g, "-");
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (deleting) return;
+
+    setDeleting(true);
+    try {
+      const documentId = `linkedin://${(result.clickUri || result.uri).replace(/https?:\/\//, "")}`;
+      const res = await fetch("/api/linkedin/add", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId }),
+      });
+
+      if (res.ok) {
+        const engine = getSearchEngine();
+        const { executeSearch } = loadSearchActions(engine);
+        const { logSearchFromLink } = loadSearchAnalyticsActions(engine);
+        engine.dispatch(executeSearch(logSearchFromLink()));
+      }
+    } catch {
+      setDeleting(false);
+    }
+  };
 
   const cardContent = (
     <div
-      className="card-animate bg-dex-surface rounded-xl border border-dex-border/60 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group shadow-sm"
+      className="card-animate bg-dex-surface rounded-xl border border-dex-border/60 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group shadow-sm relative"
       style={{ animationDelay: `${index * 50}ms` }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = `${accentColor}40`;
@@ -48,25 +74,16 @@ export default function PokemonCard({ result, index }: Props) {
 
       <div className={`bg-gradient-to-br ${bgGradient} p-4 flex items-center justify-center h-44 relative overflow-hidden`}>
         <span className="absolute top-3 right-3 text-xs font-mono text-dex-text-muted/40 font-medium">
-          {isLinkedIn ? "#PEOPLE" : `#${String(number).padStart(4, "0")}`}
+          #{String(number).padStart(4, "0")}
         </span>
         {image && (
           <img
             src={image}
             alt={result.title}
-            className={`max-h-full max-w-full object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300 ${
-              isLinkedIn ? "rounded-full w-28 h-28 object-cover" : ""
-            }`}
+            className="max-h-full max-w-full object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300"
             loading="lazy"
             referrerPolicy="no-referrer"
           />
-        )}
-        {isLinkedIn && !image && (
-          <div className="w-28 h-28 rounded-full flex items-center justify-center" style={{ background: `${LINKEDIN_BLUE}15` }}>
-            <svg className="w-12 h-12" style={{ color: LINKEDIN_BLUE }} fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-          </div>
         )}
       </div>
 
@@ -77,24 +94,31 @@ export default function PokemonCard({ result, index }: Props) {
         {species && (
           <p className="text-xs text-dex-text-muted mt-0.5 truncate">{species}</p>
         )}
-        <div className="flex gap-1.5 flex-wrap mt-3">
-          {isLinkedIn && (
-            <span
-              className="text-white text-[10px] px-2 py-0.5 rounded-full font-medium"
-              style={{ background: LINKEDIN_BLUE }}
-            >
-              LinkedIn
-            </span>
-          )}
+        <div className="flex gap-1.5 flex-wrap mt-3 items-center">
           {types.map((type) => (
             <span
               key={type}
-              className={`${isLinkedIn ? "" : (typeColors[type] || "bg-zinc-500")} text-white text-[10px] px-2 py-0.5 rounded-full font-medium`}
-              style={isLinkedIn ? { background: `${LINKEDIN_BLUE}90` } : undefined}
+              className={`${typeColors[type] || "bg-zinc-500"} text-white text-[10px] px-2 py-0.5 rounded-full font-medium`}
             >
               {type}
             </span>
           ))}
+          {isLinkedIn && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="ml-auto text-dex-text-muted/40 hover:text-red-500 transition-colors disabled:opacity-30"
+              title="Remove from Pokedex"
+            >
+              {deleting ? (
+                <div className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
