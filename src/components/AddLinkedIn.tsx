@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { loadQueryActions, loadSearchActions, loadSearchAnalyticsActions } from "@coveo/headless";
-import { getSearchEngine } from "@/lib/coveo-engine";
+
 
 export default function AddLinkedIn() {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,16 +39,16 @@ export default function AddLinkedIn() {
       });
     }, 1000);
 
+    // Fire search via SearchBox at 15s and retry at 25s
+    const fire = () => window.dispatchEvent(new CustomEvent("coveo-search", { detail: { name } }));
+
     setTimeout(() => {
-      const engine = getSearchEngine();
-      const { updateQuery } = loadQueryActions(engine);
-      const { executeSearch } = loadSearchActions(engine);
-      const { logSearchFromLink } = loadSearchAnalyticsActions(engine);
-      engine.dispatch(updateQuery({ q: name }));
-      engine.dispatch(executeSearch(logSearchFromLink()));
+      fire();
       resetAndClose();
       setSearching(false);
     }, 15000);
+
+    setTimeout(fire, 25000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
