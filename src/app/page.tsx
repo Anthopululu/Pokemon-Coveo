@@ -64,6 +64,9 @@ export default function Home() {
                 Powered by Coveo
               </p>
             </div>
+            <div className="ml-auto">
+              <AddLinkedIn />
+            </div>
           </div>
           <SearchBox />
 
@@ -102,7 +105,6 @@ export default function Home() {
         </div>
       </footer>
 
-      <AddLinkedIn />
       <AIChatPopup />
     </div>
   );
