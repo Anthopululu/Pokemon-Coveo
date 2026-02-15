@@ -37,9 +37,6 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.coveo-gradient-hover {
-  background: linear-gradient(135deg, #17d4ba, #009be6, #263ca6, #7928e6);
-}
 .coveo-gradient-btn {
   background: linear-gradient(135deg, #1cebcf, #00adff, #2e45ba, #8a36ff);
   background-size: 200% 200%;
@@ -109,29 +106,12 @@ body {
   animation: glowPulse 2s ease-in-out infinite;
 }
 
-/* Animated gradient shine */
-@keyframes gradientShine {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.gradient-shine {
-  background-size: 200% 200%;
-  animation: gradientShine 3s ease infinite;
-}
-
 /* Spinner */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 .spinner {
   animation: spin 1s linear infinite;
-}
-
-/* Focus ring style */
-.focus-ring:focus-visible {
-  outline: 2px solid var(--dex-accent);
-  outline-offset: 2px;
 }
 
 /* Selection */
