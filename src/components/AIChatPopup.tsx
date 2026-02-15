@@ -24,6 +24,72 @@ interface ChatMessage {
   }[];
   passages?: Passage[];
   isStreaming?: boolean;
+  isSearching?: boolean;
+}
+
+function SourcesBlock({ msg }: { msg: ChatMessage }) {
+  const [expanded, setExpanded] = useState(true);
+  const hasSources = (msg.pokemonResults && msg.pokemonResults.length > 0) || (msg.passages && msg.passages.length > 0);
+  if (!hasSources) return null;
+
+  return (
+    <div className="mb-2 rounded-lg border border-dex-border/40 overflow-hidden bg-dex-bg/80">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-mono text-dex-text-muted hover:text-dex-text-secondary transition-colors"
+      >
+        <svg className="w-3 h-3 text-dex-turquoise" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <span className="uppercase tracking-wider">
+          Coveo Sources ({(msg.pokemonResults?.length || 0) + (msg.passages?.length || 0)})
+        </span>
+        <svg className={`w-3 h-3 ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-2.5 space-y-2">
+          {msg.pokemonResults && msg.pokemonResults.length > 0 && (
+            <div className="grid grid-cols-2 gap-1.5">
+              {msg.pokemonResults.map((p, j) => (
+                <a
+                  key={j}
+                  href={`/pokemon/${p.title.toLowerCase().replace(/\s+/g, "-")}`}
+                  className="bg-dex-surface rounded-lg border border-dex-border/50 p-2 flex items-center gap-2 hover:border-dex-accent/30 hover:shadow-sm transition-all group"
+                >
+                  {p.image && (
+                    <img src={p.image} alt={p.title} className="w-9 h-9 object-contain group-hover:scale-110 transition-transform" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold text-dex-text truncate">{p.title}</p>
+                    <p className="text-[8px] text-dex-text-muted font-mono">#{String(p.number).padStart(4, "0")}</p>
+                    <div className="flex gap-0.5 mt-0.5">
+                      {p.types.map((t) => (
+                        <span key={t} className={`${typeColors[t] || "bg-zinc-500"} text-white text-[7px] px-1 rounded-full`}>{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {msg.passages && msg.passages.length > 0 && (
+            <div className="space-y-1">
+              {msg.passages.slice(0, 3).map((p, j) => (
+                <div key={j} className="bg-dex-surface rounded border border-dex-border/30 px-2.5 py-1.5">
+                  <p className="text-[9px] font-mono text-dex-accent/70 mb-0.5 truncate">{p.document.title}</p>
+                  <p className="text-[10px] text-dex-text-secondary leading-snug line-clamp-2">{p.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AIChatPopup() {
@@ -65,7 +131,7 @@ export default function AIChatPopup() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: query }]);
     setIsLoading(true);
-    setMessages((prev) => [...prev, { role: "assistant", content: "", isStreaming: true }]);
+    setMessages((prev) => [...prev, { role: "assistant", content: "", isSearching: true }]);
 
     try {
       const engine = buildSearchEngine({
@@ -112,6 +178,19 @@ export default function AIChatPopup() {
           number: (raw.pokemonnumber as number) || 0,
           species: (raw.pokemonspecies as string) || "",
         };
+      });
+
+      // Show RAG sources immediately, then start streaming
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.isSearching || last.isStreaming) {
+          last.pokemonResults = pokemonResults.length > 0 ? pokemonResults : undefined;
+          last.passages = passages.length > 0 ? passages : undefined;
+          last.isSearching = false;
+          last.isStreaming = true;
+        }
+        return [...updated];
       });
 
       const contextParts: string[] = [];
@@ -177,7 +256,6 @@ export default function AIChatPopup() {
         const last = updated[updated.length - 1];
         if (last.isStreaming || last.role === "assistant") {
           last.content = finalAnswer;
-          last.pokemonResults = pokemonResults.length > 0 ? pokemonResults : undefined;
           last.isStreaming = false;
         }
         return [...updated];
@@ -186,8 +264,9 @@ export default function AIChatPopup() {
       setMessages((prev) => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
-        if (last.isStreaming) {
+        if (last.isSearching || last.isStreaming) {
           last.content = "Sorry, I had trouble searching. Please try again!";
+          last.isSearching = false;
           last.isStreaming = false;
         }
         return [...updated];
@@ -252,12 +331,23 @@ export default function AIChatPopup() {
                       <span className="text-[10px] font-mono text-dex-text-muted">AI</span>
                     </div>
                   )}
+
+                  {/* RAG sources popup - shown before the LLM answer */}
+                  {msg.role === "assistant" && !msg.isSearching && <SourcesBlock msg={msg} />}
+
                   <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user"
                       ? "coveo-gradient text-white rounded-br-sm"
                       : "bg-dex-surface text-dex-text-secondary border border-dex-border/50 rounded-bl-sm shadow-sm"
                   }`}>
-                    {msg.isStreaming && !msg.content ? (
+                    {msg.isSearching ? (
+                      <div className="flex items-center gap-2 py-1">
+                        <svg className="w-3.5 h-3.5 text-dex-turquoise animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <span className="text-[11px] text-dex-text-muted font-mono">Searching Coveo index...</span>
+                      </div>
+                    ) : msg.isStreaming && !msg.content ? (
                       <div className="flex items-center gap-1.5 py-1">
                         <div className="w-1.5 h-1.5 bg-dex-text-muted rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                         <div className="w-1.5 h-1.5 bg-dex-text-muted rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -267,31 +357,6 @@ export default function AIChatPopup() {
                       <span className="whitespace-pre-line">{msg.content}</span>
                     )}
                   </div>
-
-                  {msg.pokemonResults && msg.pokemonResults.length > 0 && (
-                    <div className="mt-2 grid grid-cols-2 gap-1.5">
-                      {msg.pokemonResults.map((p, j) => (
-                        <a
-                          key={j}
-                          href={`/pokemon/${p.title.toLowerCase().replace(/\s+/g, "-")}`}
-                          className="bg-dex-surface rounded-lg border border-dex-border/50 p-2.5 flex items-center gap-2.5 hover:border-dex-accent/30 hover:shadow-sm transition-all group"
-                        >
-                          {p.image && (
-                            <img src={p.image} alt={p.title} className="w-10 h-10 object-contain group-hover:scale-110 transition-transform" />
-                          )}
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-semibold text-dex-text truncate">{p.title}</p>
-                            <p className="text-[9px] text-dex-text-muted font-mono">#{String(p.number).padStart(4, "0")}</p>
-                            <div className="flex gap-1 mt-0.5">
-                              {p.types.map((t) => (
-                                <span key={t} className={`${typeColors[t] || "bg-zinc-500"} text-white text-[8px] px-1 py-0 rounded-full`}>{t}</span>
-                              ))}
-                            </div>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
