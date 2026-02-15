@@ -49,53 +49,63 @@ I also added a QRE (Query Ranking Expression) in the Coveo pipeline: `@pokemonnu
 
 ---
 
-## Coveo Headless controllers and functions
+## Coveo Headless usage
 
-Everything I imported from `@coveo/headless`, grouped by what they do in the app.
+The app uses 14 controllers, 4 utility functions, and 2 action loaders from `@coveo/headless`, plus a direct REST call to the Passage Retrieval API.
 
-### Search engine
+### Controllers
 
-`buildSearchEngine` creates the engine instance that every other controller connects to. I have three of them: the main one for the search page, one dedicated to the detail page (so opening a Pokemon doesn't mess with the main search state), and one for the chat popup (same reason). One engine = one independent search context.
+Controllers are stateful objects. Each one manages a piece of the search UI: it holds its own state, reacts to search events, and exposes actions. I subscribe to each one via a `useCoveoController` hook that handles subscribe/unsubscribe.
 
-### Search input
+`buildSearchEngine` (coveo-engine.ts, detail page, chat) — the engine itself. Not technically a controller, but everything else plugs into it. I create three separate instances: one for the main search page, one for the detail page, and one for the chat popup. Each engine is an independent search context, so navigating to a detail page doesn't reset the main search.
 
-`buildSearchBox` handles the text input, debounced queries, and would normally handle query suggestions too. The native suggestion system relies on a Query Suggest ML model, which needs real user traffic to train. Mine is empty, so I set `numberOfSuggestions: 0` and built a custom autocomplete on top that queries the Coveo Search API directly and returns matching Pokemon titles. The Headless controller still manages the query text and triggers searches.
+`buildSearchBox` (SearchBox.tsx) — manages the search input text and triggers queries. It normally handles query suggestions too, but mine are disabled (`numberOfSuggestions: 0`) because the Query Suggest ML model is empty. I built a custom autocomplete on top that queries the Coveo Search API directly.
 
-### Results
+`buildResultList` (ResultList.tsx, detail page, chat) — fetches results from the engine. I pass a list of custom fields to include (`pokemontype`, `pokemonnumber`, `pokemonimage`, etc.) so the cards get all their data in one call.
 
-`buildResultList` fetches and displays search results. I pass a list of custom fields to include (`pokemontype`, `pokemonnumber`, `pokemonimage`, etc.) so each Pokemon card has all the data it needs without extra API calls. Used on the search page, on the detail page (to fetch a single Pokemon by name), and in the chat popup (to get context for the RAG pipeline).
+`buildInteractiveResult` (PokemonCard.tsx) — wraps each result card and tracks user interaction (clicks and hover intent). This feeds click data into Coveo's ART model, which learns over time which results are useful for a given query.
 
-`buildInteractiveResult` wraps each Pokemon card. It tracks clicks and hover intent (if you hover for more than a second, it counts as interest). This data feeds into Coveo's ART (Automatic Relevance Tuning) model, which learns over time which results users actually find useful for a given query. Without it, Coveo has no click signal to learn from.
+`buildQuerySummary` (QuerySummary.tsx) — gives the "Results 1-10 of 152 for 'Pikachu' - 0.23s" line. Stays in sync with the actual search state automatically.
 
-`buildQuerySummary` gives the "Results 1-10 of 152 for 'Pikachu' - 0.23s" line. Saves me from formatting that string manually and keeps it in sync with the actual search state.
+`buildFacet` (Facet.tsx) — generates checkbox filters from index values. Used twice: once for Pokemon Type, once for Generation. Coveo computes the values and counts from the current result set.
 
-### Filtering
+`buildStaticFilter` (StaticFilter.tsx) — like a facet, but with values I define myself instead of pulling from the index. Used for Starter, Legendary, and Mythical filters, each with a hardcoded expression like `@pokemoncategory=="Legendary"`.
 
-`buildFacet` generates checkbox filters from index field values. I use it twice: once for Pokemon Type, once for Generation. Coveo computes the facet values and counts automatically from the search results.
+`buildSort` (Sort.tsx) — manages the active sort criterion. Exposes the current sort so I can highlight the right option in the dropdown.
 
-`buildStaticFilter` and `buildStaticFilterValue` are for filters where I define the values myself instead of pulling them from the index. I use them for Starter, Legendary, and Mythical Pokemon. Each value has a hardcoded filter expression (like `@pokemoncategory=="Legendary"`) that I wrote. The difference with facets is that these don't depend on what's in the current result set.
+`buildPager` (Pager.tsx) — page navigation (previous/next, page numbers).
 
-### Sorting and pagination
+`buildResultsPerPage` (ResultsPerPage.tsx) — lets the user switch between 10, 25, or 50 results per page.
 
-`buildSort` manages the sort dropdown. `buildRelevanceSortCriterion` gives the default relevance sort. `buildFieldSortCriterion` lets me sort by a specific field (I use it for Pokedex number ascending/descending and name A-Z). `buildCriterionExpression` converts a sort criterion object to a string so I can compare it with the currently active sort and highlight the right option in the UI.
+`buildGeneratedAnswer` (GenAIAnswer.tsx) — Coveo's RGA (Relevance Generative Answering). When a user searches, Coveo selects passages from the results, sends them to its internal LLM, and streams back a grounded answer with citations. No custom prompt, no external API.
 
-`buildPager` handles page navigation at the bottom (previous/next, page numbers). `buildResultsPerPage` lets the user switch between 10, 25, or 50 results per page.
+`buildDidYouMean` (DidYouMean.tsx) — spelling correction. If Coveo detects a likely typo, it either auto-corrects or suggests the right query. "drgaon type" becomes "dragon type".
 
-### AI and corrections
+`buildRecentQueriesList` (RecentQueries.tsx) — stores the last 5 searches client-side and shows them in the sidebar. Clicking one re-runs that query.
 
-`buildGeneratedAnswer` is Coveo's RGA (Relevance Generative Answering). When a user searches, Coveo picks the most relevant passages from the results, sends them to its internal LLM, and streams back a grounded answer with citations. It shows up at the top of the results. No custom prompt, no external API, Coveo handles the full pipeline.
+`buildNotifyTrigger` (NotifyTrigger.tsx) — renders notifications configured in the Coveo query pipeline. If a pipeline trigger fires (e.g., when someone searches "Missingno"), this controller picks it up and displays the message.
 
-`buildDidYouMean` handles spelling correction. If Coveo detects a likely typo and gets poor results, it either auto-corrects or suggests the right query. Typing "drgaon type" gets corrected to "dragon type".
+`buildUrlManager` (SearchUrlManager.tsx) — syncs the full search state (query, facets, sort, page) to the URL hash. Changing a facet updates the URL, pasting a URL restores the search. Makes any search shareable via link.
 
-### UX and state
+### Utility functions
 
-`buildRecentQueriesList` keeps the last 5 searches in the sidebar. Clicking one re-runs that query. Stored client-side, resets on page refresh.
+These don't have state. They create configuration objects that get passed to controllers.
 
-`buildNotifyTrigger` renders notifications configured in the query pipeline. If I set up a trigger in the Coveo admin (for example, show a message when someone searches "Missingno"), this controller picks it up and renders it.
+`buildStaticFilterValue` (StaticFilter.tsx) — creates a single value object for `buildStaticFilter`. Each one holds a label and a filter expression.
 
-`buildUrlManager` syncs the full search state (query, facets, sort, page) to the URL hash. Changing a facet updates the URL, and pasting a URL restores the full search state. Makes searches shareable.
+`buildRelevanceSortCriterion` (Sort.tsx) — creates the default relevance sort criterion.
 
-`loadSearchActions` and `loadSearchAnalyticsActions` are not controllers but action loaders. I use them on page load to dispatch the initial search and log an `interfaceLoad` analytics event so Coveo knows a session started.
+`buildFieldSortCriterion` (Sort.tsx) — creates a sort criterion for a specific field. I use it for `pokemonnumber` (ascending/descending) and `title` (A-Z).
+
+`buildCriterionExpression` (Sort.tsx) — converts a sort criterion object to a string so I can compare it with the currently active sort and highlight the right option in the UI.
+
+### Action loaders
+
+These are not controllers. They load action creators from the engine so I can dispatch specific events.
+
+`loadSearchActions` (page.tsx) — gives me the `executeSearch` action. I dispatch it on page load to trigger the initial search.
+
+`loadSearchAnalyticsActions` (page.tsx) — gives me the `logInterfaceLoad` action. I pass it to `executeSearch` so Coveo logs that a new session started, which feeds into analytics and ML training.
 
 ### Outside Headless
 
