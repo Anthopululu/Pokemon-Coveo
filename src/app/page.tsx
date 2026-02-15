@@ -38,7 +38,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-dex-bg relative">
       {/* Top accent bar */}
-      <div className="h-1 bg-gradient-to-r from-dex-accent via-amber-400 to-dex-accent" />
+      <div className="h-1 bg-gradient-to-r from-dex-accent via-cyan-400 to-dex-accent" />
 
       <header className="relative border-b border-dex-border/60 bg-dex-surface/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-7 relative">

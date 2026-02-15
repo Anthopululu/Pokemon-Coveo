@@ -64,7 +64,7 @@ export default function SearchBox() {
               controller.showSuggestions();
             }}
             placeholder="Search Pokemon by name, type, ability..."
-            className="w-full pl-12 pr-28 py-3.5 bg-dex-surface border border-dex-border rounded-xl text-dex-text placeholder-dex-text-muted text-sm focus:outline-none focus:border-dex-accent/50 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.08)] transition-all shadow-sm"
+            className="w-full pl-12 pr-28 py-3.5 bg-dex-surface border border-dex-border rounded-xl text-dex-text placeholder-dex-text-muted text-sm focus:outline-none focus:border-dex-accent/50 focus:shadow-[0_0_0_3px_rgba(138,54,255,0.08)] transition-all shadow-sm"
           />
           <button
             type="submit"

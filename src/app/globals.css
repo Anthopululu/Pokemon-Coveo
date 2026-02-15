@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --dex-bg: #faf9f7;
+  --dex-bg: #faf9fc;
   --dex-surface: #ffffff;
-  --dex-elevated: #f3f2ef;
-  --dex-border: #e5e2dc;
+  --dex-elevated: #f3f1f6;
+  --dex-border: #e2dfe8;
   --dex-text: #1a1a1a;
   --dex-text-secondary: #555555;
   --dex-text-muted: #999999;
-  --dex-accent: #f97316;
-  --dex-accent-hover: #ea580c;
-  --dex-accent-subtle: rgba(249, 115, 22, 0.06);
-  --dex-accent-glow: rgba(249, 115, 22, 0.15);
+  --dex-accent: #8a36ff;
+  --dex-accent-hover: #7928e6;
+  --dex-accent-subtle: rgba(138, 54, 255, 0.06);
+  --dex-accent-glow: rgba(138, 54, 255, 0.15);
 }
 
 body {
@@ -36,8 +36,8 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d5d2cc; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #b5b2ac; }
+::-webkit-scrollbar-thumb { background: #d5d2dc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #b5b2bc; }
 
 /* Stat bar animation */
 @keyframes fillBar {
@@ -73,8 +73,8 @@ body {
 
 /* Glow pulse for the chat button */
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
-  50% { box-shadow: 0 0 20px 4px rgba(249, 115, 22, 0.25); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(138, 54, 255, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(138, 54, 255, 0.25); }
 }
 .glow-pulse {
   animation: glowPulse 2s ease-in-out infinite;
@@ -96,6 +96,6 @@ body {
 
 /* Selection */
 ::selection {
-  background: rgba(249, 115, 22, 0.2);
+  background: rgba(138, 54, 255, 0.2);
   color: #1a1a1a;
 }
