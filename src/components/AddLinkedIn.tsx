@@ -8,7 +8,6 @@ export default function AddLinkedIn() {
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
-  const [addedName, setAddedName] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,34 +21,6 @@ export default function AddLinkedIn() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const [searching, setSearching] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-
-  const searchForPerson = (name: string) => {
-    setSearching(true);
-    setCountdown(15);
-
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
-
-    // Fire search via SearchBox at 15s and retry at 25s
-    const fire = () => window.dispatchEvent(new CustomEvent("coveo-search", { detail: { name } }));
-
-    setTimeout(() => {
-      fire();
-      resetAndClose();
-      setSearching(false);
-    }, 15000);
-
-    setTimeout(fire, 25000);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +42,7 @@ export default function AddLinkedIn() {
       if (res.ok) {
         setStatus("success");
         setMessage(data.message || "Profile added successfully!");
-        setAddedName(data.name || "");
+        
         setUrl("");
       } else {
         setStatus("error");
@@ -88,8 +59,7 @@ export default function AddLinkedIn() {
     setTimeout(() => {
       setStatus("idle");
       setMessage("");
-      setAddedName("");
-      setUrl("");
+            setUrl("");
     }, 300);
   };
 
@@ -138,25 +108,9 @@ export default function AddLinkedIn() {
                   </svg>
                 </div>
                 <p className="text-sm text-dex-text font-medium">{message}</p>
-                {addedName && (
-                  <button
-                    onClick={() => searchForPerson(addedName)}
-                    disabled={searching}
-                    className="mt-3 text-sm font-medium px-4 py-2 rounded-lg text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-70 flex items-center gap-2 mx-auto"
-                    style={{ background: "#0A66C2" }}
-                  >
-                    {searching ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Indexing... {countdown > 0 ? `${countdown}s` : ""}
-                      </>
-                    ) : (
-                      <>Search for {addedName}</>
-                    )}
-                  </button>
-                )}
+                <p className="text-[11px] text-dex-text-muted mt-2 font-mono">Search in ~15s to find the profile</p>
                 <button
-                  onClick={() => { setStatus("idle"); setMessage(""); setAddedName(""); }}
+                  onClick={() => { setStatus("idle"); setMessage(""); }}
                   className="mt-3 block mx-auto text-xs font-mono text-dex-accent hover:underline"
                 >
                   Add another
