@@ -111,7 +111,7 @@ export default function PokemonDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dex-bg">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-14 h-14 border-2 border-dex-accent border-t-transparent rounded-full spinner mx-auto mb-4" />
           <p className="text-dex-text-muted font-mono text-sm tracking-wider uppercase">Loading Pokemon</p>
@@ -122,7 +122,7 @@ export default function PokemonDetailPage() {
 
   if (!pokemon) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-dex-bg gap-4">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <p className="text-dex-text-muted text-lg">Pokemon not found</p>
         <Link href="/" className="text-dex-accent hover:text-dex-accent-hover font-mono text-sm transition-colors">
           &larr; Back to search
@@ -136,7 +136,7 @@ export default function PokemonDetailPage() {
   const accentColor = typeHex[primaryType] || "#a1a1aa";
 
   return (
-    <div className="min-h-screen bg-dex-bg">
+    <div className="min-h-screen">
       {/* Top accent bar */}
       <div className="h-1" style={{ background: `linear-gradient(90deg, ${accentColor}, ${accentColor}80, ${accentColor}30)` }} />
 

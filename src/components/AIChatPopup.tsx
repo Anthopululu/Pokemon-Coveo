@@ -9,87 +9,12 @@ import {
   loadSearchAnalyticsActions,
 } from "@coveo/headless";
 import { coveoConfig } from "@/lib/coveo-config";
-import { typeColors } from "@/lib/pokemon-utils";
-import { retrievePassages, Passage } from "@/lib/passage-retrieval";
+import { retrievePassages } from "@/lib/passage-retrieval";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-  pokemonResults?: {
-    title: string;
-    image: string;
-    types: string[];
-    number: number;
-    species: string;
-  }[];
-  passages?: Passage[];
   isStreaming?: boolean;
-  isSearching?: boolean;
-}
-
-function SourcesBlock({ msg }: { msg: ChatMessage }) {
-  const [expanded, setExpanded] = useState(true);
-  const hasSources = (msg.pokemonResults && msg.pokemonResults.length > 0) || (msg.passages && msg.passages.length > 0);
-  if (!hasSources) return null;
-
-  return (
-    <div className="mb-2 rounded-lg border border-dex-border/40 overflow-hidden bg-dex-bg/80">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-mono text-dex-text-muted hover:text-dex-text-secondary transition-colors"
-      >
-        <svg className="w-3 h-3 text-dex-turquoise" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <span className="uppercase tracking-wider">
-          Coveo Sources ({(msg.pokemonResults?.length || 0) + (msg.passages?.length || 0)})
-        </span>
-        <svg className={`w-3 h-3 ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {expanded && (
-        <div className="px-3 pb-2.5 space-y-2">
-          {msg.pokemonResults && msg.pokemonResults.length > 0 && (
-            <div className="grid grid-cols-2 gap-1.5">
-              {msg.pokemonResults.map((p, j) => (
-                <a
-                  key={j}
-                  href={`/pokemon/${p.title.toLowerCase().replace(/\s+/g, "-")}`}
-                  className="bg-dex-surface rounded-lg border border-dex-border/50 p-2 flex items-center gap-2 hover:border-dex-accent/30 hover:shadow-sm transition-all group"
-                >
-                  {p.image && (
-                    <img src={p.image} alt={p.title} className="w-9 h-9 object-contain group-hover:scale-110 transition-transform" />
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold text-dex-text truncate">{p.title}</p>
-                    <p className="text-[8px] text-dex-text-muted font-mono">#{String(p.number).padStart(4, "0")}</p>
-                    <div className="flex gap-0.5 mt-0.5">
-                      {p.types.map((t) => (
-                        <span key={t} className={`${typeColors[t] || "bg-zinc-500"} text-white text-[7px] px-1 rounded-full`}>{t}</span>
-                      ))}
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-
-          {msg.passages && msg.passages.length > 0 && (
-            <div className="space-y-1">
-              {msg.passages.slice(0, 3).map((p, j) => (
-                <div key={j} className="bg-dex-surface rounded border border-dex-border/30 px-2.5 py-1.5">
-                  <p className="text-[9px] font-mono text-dex-accent/70 mb-0.5 truncate">{p.document.title}</p>
-                  <p className="text-[10px] text-dex-text-secondary leading-snug line-clamp-2">{p.text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function AIChatPopup() {
@@ -131,7 +56,7 @@ export default function AIChatPopup() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: query }]);
     setIsLoading(true);
-    setMessages((prev) => [...prev, { role: "assistant", content: "", isSearching: true }]);
+    setMessages((prev) => [...prev, { role: "assistant", content: "", isStreaming: true }]);
 
     try {
       const engine = buildSearchEngine({
@@ -169,35 +94,13 @@ export default function AIChatPopup() {
 
       const passages = await passagePromise;
 
-      const pokemonResults = resultList.state.results.slice(0, 4).map((r) => {
-        const raw = r.raw as Record<string, unknown>;
-        return {
-          title: r.title,
-          image: (raw.pokemonimage as string) || "",
-          types: (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[],
-          number: (raw.pokemonnumber as number) || 0,
-          species: (raw.pokemonspecies as string) || "",
-        };
-      });
-
-      // Show RAG sources immediately, then start streaming
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last.isSearching || last.isStreaming) {
-          last.pokemonResults = pokemonResults.length > 0 ? pokemonResults : undefined;
-          last.passages = passages.length > 0 ? passages : undefined;
-          last.isSearching = false;
-          last.isStreaming = true;
-        }
-        return [...updated];
-      });
-
       const contextParts: string[] = [];
-      for (const p of pokemonResults) {
-        contextParts.push(`- ${p.title} (#${p.number}): ${p.types.join("/")} type. Species: ${p.species || "Unknown"}.`);
-      }
       for (const r of resultList.state.results.slice(0, 4)) {
+        const raw = r.raw as Record<string, unknown>;
+        const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
+        const number = (raw.pokemonnumber as number) || 0;
+        const species = (raw.pokemonspecies as string) || "";
+        contextParts.push(`- ${r.title} (#${number}): ${types.join("/")} type. Species: ${species || "Unknown"}.`);
         if (r.excerpt) {
           contextParts.push(`[${r.title}]: ${r.excerpt}`);
         }
@@ -216,7 +119,11 @@ export default function AIChatPopup() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, context }),
+          body: JSON.stringify({
+            query,
+            context,
+            history: messages.filter((m) => !m.isStreaming).slice(1, -1),
+          }),
         });
 
         if (res.ok && res.body) {
@@ -248,7 +155,18 @@ export default function AIChatPopup() {
       } catch {}
 
       if (!finalAnswer) {
-        finalAnswer = buildFallbackAnswer(query, pokemonResults);
+        const results = resultList.state.results;
+        if (results.length > 0) {
+          const raw = results[0].raw as Record<string, unknown>;
+          const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
+          const number = (raw.pokemonnumber as number) || 0;
+          const species = (raw.pokemonspecies as string) || "";
+          finalAnswer = `${results[0].title} (#${number}) is a ${types.join("/")} type`;
+          if (species) finalAnswer += ` (${species})`;
+          finalAnswer += ".";
+        } else {
+          finalAnswer = "I couldn't find any Pokemon matching that. Try a specific name or type!";
+        }
       }
 
       setMessages((prev) => {
@@ -264,9 +182,8 @@ export default function AIChatPopup() {
       setMessages((prev) => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
-        if (last.isSearching || last.isStreaming) {
+        if (last.isStreaming) {
           last.content = "Sorry, I had trouble searching. Please try again!";
-          last.isSearching = false;
           last.isStreaming = false;
         }
         return [...updated];
@@ -331,23 +248,12 @@ export default function AIChatPopup() {
                       <span className="text-[10px] font-mono text-dex-text-muted">AI</span>
                     </div>
                   )}
-
-                  {/* RAG sources popup - shown before the LLM answer */}
-                  {msg.role === "assistant" && !msg.isSearching && <SourcesBlock msg={msg} />}
-
                   <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user"
                       ? "coveo-gradient text-white rounded-br-sm"
                       : "bg-dex-surface text-dex-text-secondary border border-dex-border/50 rounded-bl-sm shadow-sm"
                   }`}>
-                    {msg.isSearching ? (
-                      <div className="flex items-center gap-2 py-1">
-                        <svg className="w-3.5 h-3.5 text-dex-turquoise animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <span className="text-[11px] text-dex-text-muted font-mono">Searching Coveo index...</span>
-                      </div>
-                    ) : msg.isStreaming && !msg.content ? (
+                    {msg.isStreaming && !msg.content ? (
                       <div className="flex items-center gap-1.5 py-1">
                         <div className="w-1.5 h-1.5 bg-dex-text-muted rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                         <div className="w-1.5 h-1.5 bg-dex-text-muted rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -390,18 +296,4 @@ export default function AIChatPopup() {
       )}
     </>
   );
-}
-
-function buildFallbackAnswer(
-  _query: string,
-  results: { title: string; types: string[]; number: number; species: string }[]
-): string {
-  if (results.length === 0) {
-    return "I couldn't find any Pokemon matching that. Try a specific name or type!";
-  }
-  const best = results[0];
-  let answer = `${best.title} (#${best.number}) is a ${best.types.join("/")} type`;
-  if (best.species) answer += ` (${best.species})`;
-  answer += ".";
-  return answer;
 }

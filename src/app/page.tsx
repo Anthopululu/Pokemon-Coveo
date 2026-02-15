@@ -27,7 +27,7 @@ export default function Home() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dex-bg">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-14 h-14 border-2 border-dex-accent border-t-transparent rounded-full spinner mx-auto mb-4" />
           <p className="text-dex-text-muted font-mono text-sm tracking-wider uppercase">Loading Pokedex</p>
@@ -37,7 +37,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-dex-bg relative">
+    <div className="min-h-screen relative">
       {/* Top accent bar - Coveo gradient */}
       <div className="h-1 coveo-gradient" />
 
