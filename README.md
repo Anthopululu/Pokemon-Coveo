@@ -27,7 +27,7 @@ Live at [pokedexcoveo.com](https://pokedexcoveo.com)
 ### Advanced (all done)
 
 - [x] Coveo RGA is live. Ask something like "what is the strongest fire type pokemon?" and you get a generative answer with citations above the results
-- [x] Set up the Query Suggest ML model in the pipeline. It needs real user traffic to start producing suggestions though, so I also built a custom autocomplete that queries the Search API on each keystroke and shows matching Pokemon names. Once the QS model has enough data it'll take over
+- [x] Query Suggest ML model is active and trained. I also built a custom autocomplete on top that queries the Search API on each keystroke for matching Pokemon names
 - [x] Detail page for each Pokemon: image, type badges, stat bars (HP, Attack, Defense...), abilities, height/weight, description, and relevant passages from the index
 - [x] Presentation prepared separately
 
@@ -197,7 +197,7 @@ The `useCoveoController` hook in `lib/coveo.ts` handles subscribe/unsubscribe so
 
 I have a QRE that boosts `@pokemonnumber<200` by +7000 so popular Gen 1/2 Pokemon show up first. Without it, searching "Pikachu" also ranks Pikipek pretty high because of semantic similarity.
 
-Four ML models are active: Semantic Encoder, RGA, Query Suggestions (empty for now, needs traffic), and ART (Automatic Relevance Tuning, fed by click analytics from `buildInteractiveResult`).
+Four ML models are active: Semantic Encoder, RGA, Query Suggestions, and ART (Automatic Relevance Tuning, fed by click analytics from `buildInteractiveResult`).
 
 ---
 
@@ -207,7 +207,7 @@ I went with Headless instead of Atomic because I wanted the UI to look like an a
 
 Push API instead of the Web Crawler because I get cleaner metadata that way. Each Pokemon has typed fields (multi-value types, integer Pokedex number, image URL) instead of having to extract stuff from raw HTML.
 
-The custom autocomplete exists because the Query Suggest model needs real traffic to train, and this is a demo with no users. So I query the Search API directly on each keystroke and show matching titles.
+I also added a custom autocomplete that queries the Search API directly on each keystroke and shows matching titles, on top of the Query Suggest model.
 
 LinkedIn imports take about 15 seconds to index in Coveo, so I store pending profiles in localStorage and show them as "Just added" cards immediately. Once Coveo finishes indexing, the real results replace them.
 
@@ -226,7 +226,6 @@ Tests cover the LinkedIn API route (auth, validation, Coveo delete) and the chat
 
 ## Known limitations
 
-- Query Suggest model is empty (needs real traffic)
 - LinkedIn import depends on Bright Data availability
 - The 2-minute localStorage TTL for deleted/pending profiles is a workaround, ideally Coveo indexing would be faster
 - Admin token is exposed client-side (`NEXT_PUBLIC_ADMIN_TOKEN`), fine for a demo but not for production
