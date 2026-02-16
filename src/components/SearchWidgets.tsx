@@ -1,18 +1,33 @@
+/**
+ * SearchWidgets — All Coveo search UI widgets in one file.
+ *
+ * Exports: SearchBox, Facet, MobileFacets, Pager, GenAIAnswer,
+ *   DidYouMean, NotifyTrigger, RecentQueries, StaticFilter,
+ *   SearchUrlManager, PassageHighlights
+ *
+ * Each widget wraps a Coveo Headless controller and auto-updates via useCoveoController.
+ */
+
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import {
   buildDidYouMean,
+  buildFacet,
   buildGeneratedAnswer,
   buildNotifyTrigger,
   buildPager,
   buildRecentQueriesList,
+  buildSearchBox,
   buildStaticFilter,
   buildStaticFilterValue,
   buildUrlManager,
+  FacetValue,
+  loadQueryActions,
+  loadSearchActions,
+  loadSearchAnalyticsActions,
 } from "@coveo/headless";
-import { getSearchEngine, useCoveoController } from "@/lib/coveo";
-import { Passage, retrievePassages } from "@/lib/passage-retrieval";
+import { getSearchEngine, useCoveoController, coveoConfig, Passage, retrievePassages } from "@/lib/coveo";
 
 // ── DidYouMean ──────────────────────────────────────────────────────
 
@@ -333,6 +348,336 @@ export function PassageHighlights({ pokemonName }: { pokemonName: string }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── SearchBox ────────────────────────────────────────────────────────
+
+const DELETED_STORAGE_KEY = "pokedex-deleted-linkedin";
+
+function getDeletedTitles(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const stored = localStorage.getItem(DELETED_STORAGE_KEY);
+    if (!stored) return new Set();
+    const entries = JSON.parse(stored);
+    if (!Array.isArray(entries) || entries.length === 0) return new Set();
+    if (typeof entries[0] === "string") return new Set();
+    const now = Date.now();
+    return new Set(
+      entries
+        .filter((e: { at: number }) => now - e.at < 120000)
+        .map((e: { title: string }) => e.title.toLowerCase())
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+interface TitleSuggestion {
+  title: string;
+  matchStart: number;
+  matchEnd: number;
+}
+
+export function SearchBox() {
+  const controller = useRef(
+    buildSearchBox(getSearchEngine(), {
+      options: { numberOfSuggestions: 0 },
+    })
+  ).current;
+
+  useCoveoController(controller);
+  const [localValue, setLocalValue] = useState("");
+  const [suggestions, setSuggestions] = useState<TitleSuggestion[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const suggestRef = useRef<ReturnType<typeof setTimeout>>();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const name = (e as CustomEvent).detail?.name;
+      if (name) {
+        setLocalValue(name);
+        setShowDropdown(false);
+        controller.updateText(name);
+        controller.submit();
+      }
+    };
+    window.addEventListener("coveo-search", handler);
+    return () => window.removeEventListener("coveo-search", handler);
+  }, [controller]);
+
+  const fetchSuggestions = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `https://${coveoConfig.organizationId}.org.coveo.com/rest/search/v2`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${coveoConfig.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            q: query,
+            numberOfResults: 6,
+            fieldsToInclude: ["title"],
+            searchHub: "PokemonSearch",
+          }),
+        }
+      );
+      const data = await res.json();
+      const q = query.toLowerCase();
+      const titles: TitleSuggestion[] = (data.results || [])
+        .map((r: { title: string }) => {
+          const title = r.title;
+          const idx = title.toLowerCase().indexOf(q);
+          return {
+            title,
+            matchStart: idx >= 0 ? idx : -1,
+            matchEnd: idx >= 0 ? idx + query.length : -1,
+          };
+        })
+        .filter(
+          (item: TitleSuggestion, i: number, arr: TitleSuggestion[]) =>
+            arr.findIndex((a) => a.title === item.title) === i
+        )
+        .filter((item: TitleSuggestion) => !getDeletedTitles().has(item.title.toLowerCase()));
+      setSuggestions(titles);
+    } catch {
+      setSuggestions([]);
+    }
+  }, []);
+
+  const onChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setLocalValue(val);
+      setShowDropdown(true);
+      controller.updateText(val);
+
+      clearTimeout(suggestRef.current);
+      suggestRef.current = setTimeout(() => fetchSuggestions(val), 200);
+
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => controller.submit(), 500);
+    },
+    [controller, fetchSuggestions]
+  );
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    clearTimeout(debounceRef.current);
+    clearTimeout(suggestRef.current);
+    setShowDropdown(false);
+    controller.updateText(localValue);
+    // Force re-execution via engine to handle same-query re-search
+    const engine = getSearchEngine();
+    const { executeSearch } = loadSearchActions(engine);
+    const { logSearchboxSubmit } = loadSearchAnalyticsActions(engine);
+    engine.dispatch(executeSearch(logSearchboxSubmit()));
+  };
+
+  const pickSuggestion = (title: string) => {
+    setLocalValue(title);
+    setShowDropdown(false);
+    setSuggestions([]);
+    controller.updateText(title);
+    controller.submit();
+  };
+
+  const clearSearch = () => {
+    setLocalValue("");
+    setSuggestions([]);
+    setShowDropdown(false);
+    controller.updateText("");
+    // Force query to empty and re-execute via engine
+    const engine = getSearchEngine();
+    const { updateQuery } = loadQueryActions(engine);
+    const { executeSearch } = loadSearchActions(engine);
+    const { logSearchboxSubmit } = loadSearchAnalyticsActions(engine);
+    engine.dispatch(updateQuery({ q: "" }));
+    engine.dispatch(executeSearch(logSearchboxSubmit()));
+  };
+
+  return (
+    <div className="relative w-full max-w-2xl" ref={wrapperRef}>
+      <form onSubmit={onSubmit}>
+        <div className="relative group">
+          <svg
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dex-text-muted group-focus-within:text-dex-accent transition-colors"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={localValue}
+            onChange={onChange}
+            onFocus={() => {
+              if (localValue.length >= 2) {
+                setShowDropdown(true);
+                fetchSuggestions(localValue);
+              }
+            }}
+            placeholder="Search Pokemon by name, type, ability..."
+            className="w-full pl-12 pr-36 py-3.5 bg-dex-surface border border-dex-border rounded-xl text-dex-text placeholder-dex-text-muted text-sm focus:outline-none focus:border-dex-accent/50 focus:shadow-[0_0_0_3px_rgba(138,54,255,0.08)] transition-all shadow-sm"
+          />
+          {localValue && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute right-24 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-dex-text-muted hover:text-dex-text hover:bg-dex-elevated transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+          <button
+            type="submit"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 coveo-gradient-btn text-white px-5 py-2 rounded-lg active:scale-95 font-medium text-sm"
+          >
+            Search
+          </button>
+        </div>
+      </form>
+
+      {showDropdown && suggestions.length > 0 && (
+        <ul className="absolute z-50 w-full mt-2 bg-dex-surface border border-dex-border/80 rounded-xl shadow-xl shadow-black/8 overflow-hidden">
+          {suggestions.map((s, i) => (
+            <li
+              key={i}
+              onClick={() => pickSuggestion(s.title)}
+              className="px-5 py-3 hover:bg-dex-elevated cursor-pointer text-sm text-dex-text-secondary hover:text-dex-text transition-colors border-b border-dex-border/30 last:border-0"
+            >
+              {s.matchStart >= 0 ? (
+                <>
+                  {s.title.slice(0, s.matchStart)}
+                  <span className="text-dex-accent font-semibold">
+                    {s.title.slice(s.matchStart, s.matchEnd)}
+                  </span>
+                  {s.title.slice(s.matchEnd)}
+                </>
+              ) : (
+                s.title
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ── Facet ────────────────────────────────────────────────────────────
+
+interface FacetProps {
+  field: string;
+  title: string;
+}
+
+export function Facet({ field, title }: FacetProps) {
+  const facet = useRef(
+    buildFacet(getSearchEngine(), {
+      options: { field, numberOfValues: 20, sortCriteria: "occurrences" },
+    })
+  ).current;
+
+  const { state } = useCoveoController(facet);
+
+  const visible = state.values.filter(
+    (v) => v.numberOfResults > 0 || v.state === "selected"
+  );
+  if (!visible.length) return null;
+
+  const toggle = (val: FacetValue) => facet.toggleSelect(val);
+
+  return (
+    <div className="mb-6 last:mb-0">
+      <h3 className="text-[10px] font-mono font-medium text-dex-text-muted uppercase tracking-[0.15em] mb-3">
+        {title}
+      </h3>
+      <ul className="space-y-0.5">
+        {visible.map((val) => (
+          <li key={val.value}>
+            <button
+              onClick={() => toggle(val)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm flex justify-between items-center transition-all ${
+                val.state === "selected"
+                  ? "bg-dex-accent/8 text-dex-accent border border-dex-accent/20"
+                  : "text-dex-text-secondary hover:text-dex-text hover:bg-dex-elevated border border-transparent"
+              }`}
+            >
+              <span className="truncate">{val.value}</span>
+              <span
+                className={`text-[10px] font-mono ml-2 flex-shrink-0 ${
+                  val.state === "selected" ? "text-dex-accent/60" : "text-dex-text-muted/50"
+                }`}
+              >
+                {val.numberOfResults}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {state.canShowMoreValues && (
+        <button
+          onClick={() => facet.showMoreValues()}
+          className="mt-2 text-xs text-dex-accent hover:text-dex-accent-hover font-mono transition-colors"
+        >
+          + more
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── MobileFacets ────────────────────────────────────────────────────
+
+export function MobileFacets() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="lg:hidden mb-5">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-dex-surface border border-dex-border/40 rounded-xl text-sm"
+      >
+        <span className="font-mono text-dex-text-secondary text-xs uppercase tracking-wider">Filters</span>
+        <svg
+          className={`w-4 h-4 text-dex-text-muted transition-transform ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="mt-2 p-4 bg-dex-surface border border-dex-border/40 rounded-xl">
+          <Facet field="pokemontype" title="Type" />
+          <Facet field="pokemongeneration" title="Generation" />
+        </div>
+      )}
     </div>
   );
 }
