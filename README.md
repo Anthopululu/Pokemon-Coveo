@@ -160,16 +160,16 @@ npm run start        # start production server
 npm run lint         # ESLint
 ```
 
-### Index Pokemon data
+### Scrape and index Pokemon data
 
-`data/pokemon.json` has all 1025 Pokemon scraped from pokemondb.net. Push them to your Coveo source:
+Two scripts in `scripts/`:
 
 ```bash
-curl -X PUT "https://api.cloud.coveo.com/push/v1/organizations/$COVEO_ORG_ID/sources/$COVEO_SOURCE_ID/documents?documentId=https://pokemondb.net/pokedex/pikachu" \
-  -H "Authorization: Bearer $COVEO_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Pikachu","data":"...","pokemontype":["Electric"],"pokemonnumber":25}'
+npx tsx scripts/scrape-pokemon.ts    # scrape pokemondb.net -> data/pokemon.json
+npx tsx scripts/push-to-coveo.ts     # push data/pokemon.json -> Coveo
 ```
+
+The scraper goes through all 1025 Pokemon pages on pokemondb.net, parses the HTML with cheerio, and saves everything (name, types, stats, abilities, image, etc.) to `data/pokemon.json`. The push script reads that file and sends each document to Coveo via the Push API.
 
 ### Deploy
 
