@@ -209,8 +209,6 @@ export async function POST(req: NextRequest) {
     await pollForCompletion(snapshotId);
     const profile = await fetchSnapshot(snapshotId);
 
-    console.log("Bright Data profile response:", JSON.stringify(profile, null, 2));
-
     const coveoDoc = mapProfileToCoveo(profile, linkedinUrl);
     await pushToCoveo(coveoDoc);
 
@@ -218,7 +216,6 @@ export async function POST(req: NextRequest) {
       success: true,
       name: coveoDoc.title,
       message: `${coveoDoc.title} has been added to the Pokedex!`,
-      debug: { profileKeys: Object.keys(profile), avatar: profile.avatar, profile_pic_url: profile.profile_pic_url, profile_image_url: profile.profile_image_url, photo: profile.photo, image: profile.image },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
