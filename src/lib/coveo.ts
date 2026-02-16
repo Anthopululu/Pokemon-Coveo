@@ -1,13 +1,3 @@
-/**
- * Shared Coveo utilities.
- *
- * - Config: org ID and access token from environment variables
- * - Engine: singleton search engine shared across components
- * - Hook: useCoveoController — subscribes a React component to any Coveo controller
- * - Passage Retrieval: calls the Coveo CPR v3 API for text chunks
- * - Type colors: maps Pokemon types to Tailwind classes and hex values
- */
-
 import { useEffect, useState, useRef } from "react";
 import { buildSearchEngine, SearchEngine } from "@coveo/headless";
 

@@ -1,13 +1,3 @@
-/**
- * SearchWidgets — All Coveo search UI widgets in one file.
- *
- * Exports: SearchBox, Facet, MobileFacets, Pager, GenAIAnswer,
- *   DidYouMean, NotifyTrigger, RecentQueries, StaticFilter,
- *   SearchUrlManager, PassageHighlights
- *
- * Each widget wraps a Coveo Headless controller and auto-updates via useCoveoController.
- */
-
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";

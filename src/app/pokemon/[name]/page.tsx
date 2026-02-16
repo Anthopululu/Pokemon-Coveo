@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   buildSearchEngine,
   buildResultList,
@@ -10,8 +11,7 @@ import {
   loadQueryActions,
   loadSearchAnalyticsActions,
 } from "@coveo/headless";
-import { coveoConfig } from "@/lib/coveo";
-import { typeColors, typeHex, typeBgGradients } from "@/lib/pokemon-utils";
+import { coveoConfig, typeColors, typeHex, typeBgGradients } from "@/lib/coveo";
 import { PassageHighlights } from "@/components/SearchWidgets";
 
 interface PokemonData {
@@ -78,17 +78,47 @@ export default function PokemonDetailPage() {
 
       const results = resultList.state.results;
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const match = results.find(
-        (r) => normalize(r.title) === normalize(searchName)
-      ) || results[0];
 
-      if (match) {
+      // 1. Try exact match from Coveo results
+      const exactMatch = results.find(
+        (r) => normalize(r.title) === normalize(searchName)
+      );
+
+      // 2. Try pending LinkedIn profiles from localStorage
+      let pendingMatch = null;
+      if (!exactMatch) {
+        try {
+          const pending = JSON.parse(localStorage.getItem("pokedex-pending-linkedin") || "[]");
+          pendingMatch = pending.find(
+            (p: { title: string }) => normalize(p.title) === normalize(searchName)
+          );
+        } catch {}
+      }
+
+      // 3. Fall back to first Coveo result only if nothing else matched
+      const match = exactMatch || (pendingMatch ? null : results[0]);
+
+      if (pendingMatch && !exactMatch) {
+        setPokemon({
+          title: pendingMatch.title,
+          image: pendingMatch.pokemonimage || "",
+          types: Array.isArray(pendingMatch.pokemontype) ? pendingMatch.pokemontype : [],
+          generation: pendingMatch.pokemongeneration || "",
+          number: pendingMatch.pokemonnumber || 0,
+          species: pendingMatch.pokemonspecies || "",
+          abilities: [],
+          stats: {},
+          height: "",
+          weight: "",
+          excerpt: "",
+        });
+      } else if (match) {
         const raw = match.raw as Record<string, unknown>;
         const toArray = (val: unknown): string[] =>
           Array.isArray(val) ? val : val ? [val as string] : [];
 
         let stats: Record<string, number> = {};
-        try { stats = JSON.parse((raw.pokemonstats as string) || "{}"); } catch { /* noop */ }
+        try { stats = JSON.parse((raw.pokemonstats as string) || "{}"); } catch {}
 
         setPokemon({
           title: match.title,
@@ -165,10 +195,14 @@ export default function PokemonDetailPage() {
 
             <div className="w-52 h-52 flex items-center justify-center relative z-10">
               {pokemon.image && (
-                <img
+                <Image
                   src={pokemon.image}
                   alt={pokemon.title}
+                  width={320}
+                  height={320}
                   className="max-w-full max-h-full object-contain drop-shadow-xl"
+                  unoptimized={!pokemon.image.includes("pokemondb.net")}
+                  priority
                 />
               )}
             </div>

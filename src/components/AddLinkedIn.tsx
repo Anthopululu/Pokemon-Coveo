@@ -2,25 +2,45 @@
 
 import { useState, useRef, useEffect } from "react";
 
+const catchMessages = [
+  "Throwing Pokeball...",
+  "Scanning profile...",
+  "Catching data...",
+  "Almost there...",
+  "Transferring to Pokedex...",
+];
 
 export default function AddLinkedIn() {
   const [isOpen, setIsOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [catchStep, setCatchStep] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const stepInterval = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(e: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        resetAndClose();
+        if (status !== "loading") resetAndClose();
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, status]);
 
+  useEffect(() => {
+    if (status === "loading") {
+      setCatchStep(0);
+      stepInterval.current = setInterval(() => {
+        setCatchStep((s) => (s + 1) % catchMessages.length);
+      }, 4000);
+    } else {
+      clearInterval(stepInterval.current);
+    }
+    return () => clearInterval(stepInterval.current);
+  }, [status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,19 +51,36 @@ export default function AddLinkedIn() {
     setMessage("");
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const adminToken = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
+      if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
+
       const res = await fetch("/api/linkedin/add", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ url: linkedinUrl }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        setStatus("success");
-        setMessage(data.message || "Profile added successfully!");
-        
-        setUrl("");
+        if (data.profile) {
+          let pending = JSON.parse(localStorage.getItem("pokedex-pending-linkedin") || "[]");
+          pending = pending.filter((p: { documentId: string }) => p.documentId !== data.profile.documentId);
+          pending.push({ ...data.profile, addedAt: Date.now() });
+          localStorage.setItem("pokedex-pending-linkedin", JSON.stringify(pending));
+
+          try {
+            const deleted: string[] = JSON.parse(localStorage.getItem("pokedex-deleted-linkedin") || "[]");
+            const filtered = deleted.filter((id) => id !== data.profile.documentId);
+            if (filtered.length !== deleted.length) {
+              localStorage.setItem("pokedex-deleted-linkedin", JSON.stringify(filtered));
+            }
+          } catch {}
+        }
+
+        window.dispatchEvent(new CustomEvent("coveo-search", { detail: { name: data.name } }));
+        resetAndClose();
       } else {
         setStatus("error");
         setMessage(data.error || "Something went wrong");
@@ -59,67 +96,97 @@ export default function AddLinkedIn() {
     setTimeout(() => {
       setStatus("idle");
       setMessage("");
-            setUrl("");
+      setUrl("");
+      setCatchStep(0);
     }, 300);
   };
 
   return (
     <div className="relative" ref={panelRef}>
-      {/* Button in header */}
       <button
         onClick={() => (isOpen ? resetAndClose() : setIsOpen(true))}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 text-white shadow-md"
-        style={{ background: "#0A66C2", boxShadow: "0 2px 8px rgba(10,102,194,0.3)" }}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 text-white shadow-md coveo-gradient-btn"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        <svg className="w-4 h-4" viewBox="0 0 100 100" fill="currentColor">
+          <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6"/>
+          <path d="M5 50 H95" stroke="currentColor" strokeWidth="6"/>
+          <circle cx="50" cy="50" r="12" fill="none" stroke="currentColor" strokeWidth="6"/>
         </svg>
-        Add Pokemon
+        Catch Pokemon
       </button>
 
-      {/* Dropdown panel */}
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-[360px] bg-dex-surface rounded-xl border border-dex-border/80 flex flex-col z-50 overflow-hidden shadow-2xl shadow-black/10 animate-slide-up">
-          {/* Header */}
           <div className="px-5 py-4 border-b border-dex-border/50 flex items-center gap-3 bg-dex-bg">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#0A66C2" }}>
-              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 3a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14m-.5 15.5v-5.3a3.26 3.26 0 00-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 011.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 001.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 00-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
-              </svg>
+            <div className="w-8 h-8 rounded-full coveo-gradient flex items-center justify-center shadow-sm">
+              <div className="w-3 h-3 rounded-full bg-white" />
             </div>
             <div>
-              <h3 className="text-sm font-syne font-bold text-dex-text">Add to Pokedex</h3>
-              <p className="text-[10px] font-mono text-dex-text-muted">From LinkedIn</p>
+              <h3 className="text-sm font-syne font-bold text-dex-text">Catch from LinkedIn</h3>
+              <p className="text-[10px] font-mono text-dex-text-muted">Add to your Pokedex</p>
             </div>
-            <button onClick={resetAndClose} className="ml-auto text-dex-text-muted hover:text-dex-text transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {status !== "loading" && (
+              <button onClick={resetAndClose} className="ml-auto text-dex-text-muted hover:text-dex-text transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
-          {/* Body */}
           <div className="p-5">
-            {status === "success" ? (
-              <div className="text-center py-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            {status === "loading" ? (
+              <div className="text-center py-6">
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  <svg viewBox="0 0 100 100" className="w-full h-full animate-[spin_2s_ease-in-out_infinite]" style={{ animationDirection: "alternate" }}>
+                    <circle cx="50" cy="50" r="45" fill="#EF4444" stroke="#333" strokeWidth="4"/>
+                    <rect x="0" y="47" width="100" height="6" fill="#333"/>
+                    <circle cx="50" cy="50" r="45" fill="white" stroke="none" style={{ clipPath: "inset(50% 0 0 0)" }}/>
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#333" strokeWidth="4"/>
+                    <circle cx="50" cy="50" r="14" fill="white" stroke="#333" strokeWidth="4"/>
+                    <circle cx="50" cy="50" r="7" fill="white" stroke="#333" strokeWidth="3"/>
                   </svg>
+                  <style>{`
+                    @keyframes pokeball-wobble {
+                      0%, 100% { transform: rotate(0deg) scale(1); }
+                      20% { transform: rotate(-25deg) scale(1.05); }
+                      40% { transform: rotate(25deg) scale(1.05); }
+                      60% { transform: rotate(-15deg) scale(1.02); }
+                      80% { transform: rotate(10deg) scale(1); }
+                    }
+                  `}</style>
+                  <div className="absolute inset-0" style={{ animation: "pokeball-wobble 1.5s ease-in-out infinite" }}>
+                    <svg viewBox="0 0 100 100" className="w-full h-full">
+                      <circle cx="50" cy="50" r="45" fill="#EF4444" stroke="#333" strokeWidth="4"/>
+                      <rect x="0" y="47" width="100" height="6" fill="#333"/>
+                      <circle cx="50" cy="50" r="45" fill="white" stroke="none" style={{ clipPath: "inset(50% 0 0 0)" }}/>
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="#333" strokeWidth="4"/>
+                      <circle cx="50" cy="50" r="14" fill="white" stroke="#333" strokeWidth="4"/>
+                      <circle cx="50" cy="50" r="7" fill="white" stroke="#333" strokeWidth="3"/>
+                    </svg>
+                  </div>
                 </div>
-                <p className="text-sm text-dex-text font-medium">{message}</p>
-                <p className="text-[11px] text-dex-text-muted mt-2 font-mono">Search in ~15s to find the profile</p>
-                <button
-                  onClick={() => { setStatus("idle"); setMessage(""); }}
-                  className="mt-3 block mx-auto text-xs font-mono text-dex-accent hover:underline"
-                >
-                  Add another
-                </button>
+                <p className="text-sm font-syne font-bold text-dex-text mb-1">
+                  {catchMessages[catchStep]}
+                </p>
+                <div className="flex justify-center gap-1 mt-2">
+                  {catchMessages.map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                        i <= catchStep ? "bg-dex-accent" : "bg-dex-border"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[10px] text-dex-text-muted mt-3 font-mono">
+                  Please wait, catching in progress...
+                </p>
               </div>
             ) : (
               <>
                 <p className="text-xs text-dex-text-muted mb-4 leading-relaxed">
-                  Paste a LinkedIn profile URL to add someone to the Pokedex. Their profile will appear as a searchable card.
+                  Paste a LinkedIn profile URL to catch someone and add them to your Pokedex.
                 </p>
                 <form onSubmit={handleSubmit}>
                   <input
@@ -127,35 +194,21 @@ export default function AddLinkedIn() {
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="https://www.linkedin.com/in/..."
-                    disabled={status === "loading"}
-                    className="w-full px-4 py-2.5 bg-dex-elevated border border-dex-border/40 rounded-lg text-sm text-dex-text placeholder-dex-text-muted focus:outline-none focus:border-[#0A66C2]/40 transition-all disabled:opacity-40"
+                    className="w-full px-4 py-2.5 bg-dex-elevated border border-dex-border/40 rounded-lg text-sm text-dex-text placeholder-dex-text-muted focus:outline-none focus:border-dex-accent/40 focus:shadow-[0_0_0_3px_rgba(138,54,255,0.08)] transition-all disabled:opacity-40"
                   />
                   <button
                     type="submit"
-                    disabled={status === "loading" || !url.trim()}
-                    className="w-full mt-3 text-white text-sm font-medium px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ background: "#0A66C2" }}
+                    disabled={!url.trim()}
+                    className="w-full mt-3 text-white text-sm font-medium px-4 py-2.5 rounded-lg active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 coveo-gradient-btn"
                   >
-                    {status === "loading" ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Scraping profile...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span>Add to Pokedex</span>
-                      </>
-                    )}
+                    <svg className="w-4 h-4" viewBox="0 0 100 100" fill="currentColor">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8"/>
+                      <path d="M5 50 H95" stroke="currentColor" strokeWidth="8"/>
+                      <circle cx="50" cy="50" r="12" fill="none" stroke="currentColor" strokeWidth="8"/>
+                    </svg>
+                    <span>Throw Pokeball!</span>
                   </button>
                 </form>
-                {status === "loading" && (
-                  <p className="text-[11px] text-dex-text-muted mt-3 text-center font-mono">
-                    This can take up to 60 seconds...
-                  </p>
-                )}
                 {status === "error" && (
                   <p className="text-xs text-red-400 mt-3 text-center">{message}</p>
                 )}

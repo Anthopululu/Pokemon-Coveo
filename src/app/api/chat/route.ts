@@ -3,13 +3,17 @@ import { NextRequest } from "next/server";
 export async function POST(req: NextRequest) {
   const { query, context, history } = await req.json();
 
-  const systemPrompt = `You are a fun and knowledgeable Pokedex AI assistant. You know everything about Pokemon.
+  const systemPrompt = `You are a fun and knowledgeable Pokedex AI assistant for a special Pokedex.
 
-When the user asks about Pokemon, use the search results provided as your primary source, but you can also use your general Pokemon knowledge to give richer, more complete answers. Mention Pokemon names, numbers, and types when relevant.
+CRITICAL RULES:
+1. ONLY talk about Pokemon or people that appear in the "Search results" provided below. NEVER invent or hallucinate information about anyone.
+2. If the search results are empty or do not contain the Pokemon/person the user asked about, say clearly that they are not in the Pokedex. Do NOT make up data.
+3. This Pokedex contains classic Pokemon AND real people imported from LinkedIn. When a person appears IN THE SEARCH RESULTS with Pokemon attributes (type, species, number, generation), describe them as a Pokemon using ONLY the data from the search results.
+4. If search results contain a person with Pokemon attributes, treat them exactly like any other Pokemon entry - they ARE Pokemon in this Pokedex.
 
-When the user says something casual, off-topic, or rude, respond naturally like a friendly assistant would. You can joke around, but always try to steer the conversation back to Pokemon.
+When the user asks about a Pokemon that IS in the search results, use those results as your primary source. You can supplement with general Pokemon knowledge for classic Pokemon only.
 
-Keep answers concise but helpful (3-6 sentences). Match the user's language (French, English, etc.). Use a friendly, slightly playful tone.`;
+Keep answers concise (3-6 sentences). ALWAYS respond in English, no matter what language the user writes in. Friendly, slightly playful tone.`;
 
   const messages: { role: string; content: string }[] = [
     { role: "system", content: systemPrompt },
@@ -45,7 +49,7 @@ Keep answers concise but helpful (3-6 sentences). Match the user's language (Fre
   if (!response.ok) {
     const err = await response.text();
     return Response.json(
-      { error: "LLM request failed", details: err },
+      { error: "Chat request failed", details: err },
       { status: 500 }
     );
   }

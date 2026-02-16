@@ -47,7 +47,7 @@ async function pollForCompletion(snapshotId: string): Promise<void> {
     if (data.status === "ready") return;
     if (data.status === "failed") throw new Error("Bright Data scrape failed");
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 1000));
   }
 
   throw new Error("Scraping timed out after 2 minutes");
@@ -158,7 +158,20 @@ async function pushToCoveo(document: ReturnType<typeof mapProfileToCoveo>) {
   }
 }
 
+function checkAuth(req: NextRequest): Response | null {
+  const token = process.env.ADMIN_TOKEN;
+  if (!token) return null;
+  const header = req.headers.get("authorization");
+  if (header !== `Bearer ${token}`) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
+
 export async function DELETE(req: NextRequest) {
+  const authError = checkAuth(req);
+  if (authError) return authError;
+
   try {
     const { documentId } = await req.json();
 
@@ -188,6 +201,9 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authError = checkAuth(req);
+  if (authError) return authError;
+
   try {
     const { url: linkedinUrl } = await req.json();
 
@@ -210,12 +226,24 @@ export async function POST(req: NextRequest) {
     const profile = await fetchSnapshot(snapshotId);
 
     const coveoDoc = mapProfileToCoveo(profile, linkedinUrl);
-    await pushToCoveo(coveoDoc);
+    // Push to Coveo in background (don't block response)
+    pushToCoveo(coveoDoc).catch((e) => console.error("Coveo push error:", e));
 
     return Response.json({
       success: true,
       name: coveoDoc.title,
       message: `${coveoDoc.title} has been added to the Pokedex!`,
+      profile: {
+        documentId: coveoDoc.documentId,
+        title: coveoDoc.title,
+        clickableUri: coveoDoc.clickableUri,
+        pokemonimage: coveoDoc.pokemonimage,
+        pokemontype: coveoDoc.pokemontype,
+        pokemonspecies: coveoDoc.pokemonspecies,
+        pokemongeneration: coveoDoc.pokemongeneration,
+        pokemoncategory: coveoDoc.pokemoncategory,
+        pokemonnumber: coveoDoc.pokemonnumber,
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { getSearchEngine } from "@/lib/coveo";
 import { loadSearchActions, loadSearchAnalyticsActions } from "@coveo/headless";
-import SearchBox from "@/components/SearchBox";
 import ResultList from "@/components/ResultList";
-import Facet, { MobileFacets } from "@/components/Facet";
 import AIChatPopup from "@/components/AIChatPopup";
 import AddLinkedIn from "@/components/AddLinkedIn";
 import {
+  SearchBox,
+  Facet,
+  MobileFacets,
   GenAIAnswer,
   DidYouMean,
   NotifyTrigger,
@@ -69,8 +70,6 @@ export default function Home() {
             </div>
           </div>
           <SearchBox />
-
-
         </div>
       </header>
 
