@@ -37,7 +37,7 @@ Live at [pokedexcoveo.com](https://pokedexcoveo.com)
 
 ### Stuff I added on top of the challenge
 
-- A floating chat popup (Groq + Llama 3.3 70B) that uses Coveo Passage Retrieval as its knowledge base, streams responses, and keeps conversation history
+- A floating chat popup powered by Coveo RGA that generates answers from the indexed data, streams responses, and shows source citations
 - LinkedIn profile import: paste a LinkedIn URL, it scrapes the profile via Bright Data, pushes it to Coveo, and shows it as a Pokemon card in the search results. You can delete imported profiles too
 - Bearer token auth on the import/delete API routes
 - Sort by relevance, Pokedex number, or name
@@ -54,7 +54,7 @@ Live at [pokedexcoveo.com](https://pokedexcoveo.com)
 | Search | Coveo Headless |
 | Indexing | Coveo Push API |
 | Scraping | Bright Data API |
-| AI chat | Groq API (Llama 3.3 70B) |
+| AI chat | Coveo RGA (buildGeneratedAnswer) |
 | Passages | Coveo Passage Retrieval API v3 |
 | Styling | Tailwind CSS |
 | Hosting | AWS EC2, PM2, Nginx |
@@ -71,7 +71,7 @@ src/
 │   ├── globals.css                   # design tokens, gradients, animations
 │   ├── pokemon/[name]/page.tsx       # detail page with stats, abilities, passages
 │   └── api/
-│       ├── chat/route.ts             # POST: Groq chat proxy with SSE streaming
+│       ├── chat/route.ts             # POST: chat endpoint (legacy, unused)
 │       └── linkedin/add/route.ts     # POST: Bright Data scrape + Coveo push
 │                                     # DELETE: remove document from Coveo index
 ├── components/
@@ -79,7 +79,7 @@ src/
 │   │                                #   RecentQueries, StaticFilter, PassageHighlights
 │   ├── ResultList.tsx                # Pokemon card grid + pending/deleted LinkedIn logic
 │   ├── AddLinkedIn.tsx               # import button with Pokeball animation
-│   └── AIChatPopup.tsx               # floating chat (Coveo context + Groq streaming)
+│   └── AIChatPopup.tsx               # floating chat powered by Coveo RGA
 │
 └── lib/
     └── coveo.ts                      # config, engine singleton, useCoveoController hook,
