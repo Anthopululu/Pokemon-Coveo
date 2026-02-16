@@ -110,7 +110,7 @@ export default function PokemonDetailPage() {
           stats: {},
           height: "",
           weight: "",
-          excerpt: "",
+          excerpt: pendingMatch.body || "",
         });
       } else if (match) {
         const raw = match.raw as Record<string, unknown>;
@@ -232,32 +232,38 @@ export default function PokemonDetailPage() {
           {/* Content */}
           <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <h2 className="text-lg font-syne font-bold text-dex-text mb-4 tracking-tight">Info</h2>
-              <dl className="space-y-0">
-                {pokemon.height && (
-                  <div className="flex justify-between py-3 border-b border-dex-border/40">
-                    <dt className="text-dex-text-muted text-sm">Height</dt>
-                    <dd className="font-mono text-sm text-dex-text">{pokemon.height}</dd>
-                  </div>
-                )}
-                {pokemon.weight && (
-                  <div className="flex justify-between py-3 border-b border-dex-border/40">
-                    <dt className="text-dex-text-muted text-sm">Weight</dt>
-                    <dd className="font-mono text-sm text-dex-text">{pokemon.weight}</dd>
-                  </div>
-                )}
-                {pokemon.abilities.length > 0 && (
-                  <div className="flex justify-between py-3 border-b border-dex-border/40">
-                    <dt className="text-dex-text-muted text-sm">Abilities</dt>
-                    <dd className="text-sm text-dex-text text-right">{pokemon.abilities.join(", ")}</dd>
-                  </div>
-                )}
-              </dl>
+              {(pokemon.height || pokemon.weight || pokemon.abilities.length > 0) && (
+                <>
+                  <h2 className="text-lg font-syne font-bold text-dex-text mb-4 tracking-tight">Info</h2>
+                  <dl className="space-y-0">
+                    {pokemon.height && (
+                      <div className="flex justify-between py-3 border-b border-dex-border/40">
+                        <dt className="text-dex-text-muted text-sm">Height</dt>
+                        <dd className="font-mono text-sm text-dex-text">{pokemon.height}</dd>
+                      </div>
+                    )}
+                    {pokemon.weight && (
+                      <div className="flex justify-between py-3 border-b border-dex-border/40">
+                        <dt className="text-dex-text-muted text-sm">Weight</dt>
+                        <dd className="font-mono text-sm text-dex-text">{pokemon.weight}</dd>
+                      </div>
+                    )}
+                    {pokemon.abilities.length > 0 && (
+                      <div className="flex justify-between py-3 border-b border-dex-border/40">
+                        <dt className="text-dex-text-muted text-sm">Abilities</dt>
+                        <dd className="text-sm text-dex-text text-right">{pokemon.abilities.join(", ")}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </>
+              )}
 
               {pokemon.excerpt && (
-                <div className="mt-6">
-                  <h2 className="text-lg font-syne font-bold text-dex-text mb-3 tracking-tight">Description</h2>
-                  <p className="text-dex-text-secondary text-sm leading-relaxed">{pokemon.excerpt}</p>
+                <div className={pokemon.height || pokemon.weight || pokemon.abilities.length > 0 ? "mt-6" : ""}>
+                  <h2 className="text-lg font-syne font-bold text-dex-text mb-3 tracking-tight">
+                    {pokemon.generation === "LinkedIn" ? "About" : "Description"}
+                  </h2>
+                  <div className="text-dex-text-secondary text-sm leading-relaxed whitespace-pre-line">{pokemon.excerpt}</div>
                 </div>
               )}
 

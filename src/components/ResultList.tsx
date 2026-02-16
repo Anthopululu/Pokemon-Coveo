@@ -195,6 +195,7 @@ interface PendingProfile {
   pokemongeneration: string;
   pokemoncategory: string;
   pokemonnumber: number;
+  body: string;
   addedAt: number;
 }
 

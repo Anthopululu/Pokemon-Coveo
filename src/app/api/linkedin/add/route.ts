@@ -256,6 +256,7 @@ export async function POST(req: NextRequest) {
         pokemongeneration: coveoDoc.pokemongeneration,
         pokemoncategory: coveoDoc.pokemoncategory,
         pokemonnumber: coveoDoc.pokemonnumber,
+        data: coveoDoc.data,
       },
     });
   } catch (error) {
