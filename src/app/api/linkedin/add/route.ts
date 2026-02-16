@@ -1,13 +1,3 @@
-/**
- * LinkedIn Import API route.
- *
- * POST: Triggers a Bright Data scrape of a LinkedIn URL, polls for completion,
- *   maps the profile to Coveo document format (Pokemon-style fields), pushes to
- *   Coveo Push API, and returns the profile data for client-side localStorage caching.
- *
- * DELETE: Removes a document from the Coveo index by documentId.
- */
-
 import { NextRequest } from "next/server";
 
 const BRIGHT_DATA_TOKEN = process.env.BRIGHT_DATA_API_TOKEN;

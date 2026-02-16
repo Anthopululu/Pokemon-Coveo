@@ -8,8 +8,7 @@ import {
   loadQueryActions,
   loadSearchAnalyticsActions,
 } from "@coveo/headless";
-import { coveoConfig } from "@/lib/coveo";
-import { retrievePassages } from "@/lib/passage-retrieval";
+import { coveoConfig, retrievePassages } from "@/lib/coveo";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -94,8 +93,25 @@ export default function AIChatPopup() {
 
       const passages = await passagePromise;
 
+      // Filter out deleted profiles
+      const deletedTitles = new Set<string>();
+      try {
+        const deletedRaw = JSON.parse(localStorage.getItem("pokedex-deleted-linkedin") || "[]");
+        const now = Date.now();
+        for (const entry of deletedRaw) {
+          if (typeof entry === "string") continue;
+          if (entry.title && (now - entry.at) < 120000) {
+            deletedTitles.add(entry.title.toLowerCase());
+          }
+        }
+      } catch {}
+
+      const allResults = resultList.state.results.filter(
+        (r) => !deletedTitles.has(r.title.toLowerCase())
+      );
+
       const contextParts: string[] = [];
-      for (const r of resultList.state.results.slice(0, 4)) {
+      for (const r of allResults.slice(0, 4)) {
         const raw = r.raw as Record<string, unknown>;
         const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
         const number = (raw.pokemonnumber as number) || 0;
@@ -111,6 +127,22 @@ export default function AIChatPopup() {
           contextParts.push(`[${p.document.title}]: ${p.text}`);
         }
       }
+
+      // Include recently added LinkedIn profiles from localStorage
+      try {
+        const pending = JSON.parse(localStorage.getItem("pokedex-pending-linkedin") || "[]");
+        const queryWords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+        for (const p of pending) {
+          const nameLower = (p.title || "").toLowerCase();
+          const nameWords = nameLower.split(/\s+/);
+          const matches = queryWords.some((w: string) => nameWords.some((nw: string) => nw.includes(w) || w.includes(nw)));
+          if (matches) {
+            contextParts.push(`\nLinkedIn profile recently added to Pokedex:`);
+            contextParts.push(`- ${p.title}: Type: ${(p.pokemontype || []).join("/")}. Species/Role: ${p.pokemonspecies || "Unknown"}. Generation: ${p.pokemongeneration || "Unknown"}. This person was imported from LinkedIn.`);
+          }
+        }
+      } catch {}
+
       const context = contextParts.join("\n");
 
       let finalAnswer = "";

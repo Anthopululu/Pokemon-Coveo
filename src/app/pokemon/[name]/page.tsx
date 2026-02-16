@@ -92,7 +92,7 @@ export default function PokemonDetailPage() {
           pendingMatch = pending.find(
             (p: { title: string }) => normalize(p.title) === normalize(searchName)
           );
-        } catch { /* noop */ }
+        } catch {}
       }
 
       // 3. Fall back to first Coveo result only if nothing else matched
@@ -118,7 +118,7 @@ export default function PokemonDetailPage() {
           Array.isArray(val) ? val : val ? [val as string] : [];
 
         let stats: Record<string, number> = {};
-        try { stats = JSON.parse((raw.pokemonstats as string) || "{}"); } catch { /* noop */ }
+        try { stats = JSON.parse((raw.pokemonstats as string) || "{}"); } catch {}
 
         setPokemon({
           title: match.title,

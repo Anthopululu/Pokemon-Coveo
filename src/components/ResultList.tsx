@@ -1,14 +1,3 @@
-/**
- * ResultList — Pokemon card grid.
- *
- * Renders Coveo search results as type-colored Pokemon cards.
- * Also manages two localStorage-based systems:
- * - Pending profiles: LinkedIn imports shown before Coveo indexes them (2min TTL)
- * - Deleted profiles: hidden from results after deletion until Coveo syncs (2min TTL)
- *
- * Sub-components: PokemonCard, PendingLinkedInCard, QuerySummary, Sort, ResultsPerPage
- */
-
 "use client";
 
 import { useRef, useState } from "react";
@@ -187,7 +176,7 @@ function addDeletedId(id: string, title: string) {
     if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] !== "string") {
       entries = parsed;
     }
-  } catch { /* noop */ }
+  } catch {}
   entries.push({ id, title, at: Date.now() });
   localStorage.setItem(DELETED_STORAGE_KEY, JSON.stringify(entries));
 }
@@ -256,7 +245,7 @@ function PendingLinkedInCard({ profile, index }: { profile: PendingProfile; inde
           const pending = JSON.parse(localStorage.getItem("pokedex-pending-linkedin") || "[]");
           const cleaned = pending.filter((p: { documentId: string }) => p.documentId !== profile.documentId);
           localStorage.setItem("pokedex-pending-linkedin", JSON.stringify(cleaned));
-        } catch { /* noop */ }
+        } catch {}
         const engine = getSearchEngine();
         const { executeSearch } = loadSearchActions(engine);
         const { logInterfaceLoad } = loadSearchAnalyticsActions(engine);
@@ -391,7 +380,7 @@ function PokemonCard({ result, index }: { result: Result; index: number }) {
           const pending = JSON.parse(localStorage.getItem("pokedex-pending-linkedin") || "[]");
           const cleaned = pending.filter((p: { documentId: string }) => p.documentId !== documentId);
           localStorage.setItem("pokedex-pending-linkedin", JSON.stringify(cleaned));
-        } catch { /* noop */ }
+        } catch {}
         // Re-execute search to refresh results from Coveo
         const engine = getSearchEngine();
         const { executeSearch } = loadSearchActions(engine);

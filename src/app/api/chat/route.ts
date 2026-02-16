@@ -1,11 +1,3 @@
-/**
- * AI Chat API route.
- *
- * Receives: { query, context (Coveo results + passages), history (last 10 messages) }
- * Sends to Groq API (Llama 3.3 70B) with a system prompt instructing Pokedex-style responses.
- * Returns: SSE stream of tokens in OpenAI-compatible format.
- */
-
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -57,7 +49,7 @@ Keep answers concise (3-6 sentences). ALWAYS respond in English, no matter what 
   if (!response.ok) {
     const err = await response.text();
     return Response.json(
-      { error: "LLM request failed", details: err },
+      { error: "Chat request failed", details: err },
       { status: 500 }
     );
   }

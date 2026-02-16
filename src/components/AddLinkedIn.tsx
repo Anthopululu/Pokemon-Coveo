@@ -1,13 +1,3 @@
-/**
- * AddLinkedIn — "Catch Pokemon" LinkedIn import button.
- *
- * Flow: User pastes LinkedIn URL -> POST /api/linkedin/add -> Bright Data scrapes profile
- * -> Profile mapped to Pokemon format -> Pushed to Coveo + saved to localStorage
- * -> Dispatches coveo-search event so SearchBox auto-searches the new profile
- *
- * Shows a Pokeball wobble animation while importing.
- */
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -86,7 +76,7 @@ export default function AddLinkedIn() {
             if (filtered.length !== deleted.length) {
               localStorage.setItem("pokedex-deleted-linkedin", JSON.stringify(filtered));
             }
-          } catch { /* noop */ }
+          } catch {}
         }
 
         window.dispatchEvent(new CustomEvent("coveo-search", { detail: { name: data.name } }));

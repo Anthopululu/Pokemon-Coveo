@@ -77,7 +77,7 @@ describe("/api/chat", () => {
     expect(res.status).toBe(500);
 
     const data = await res.json();
-    expect(data.error).toBe("LLM request failed");
+    expect(data.error).toBe("Chat request failed");
   });
 
   it("includes conversation history in messages", async () => {
