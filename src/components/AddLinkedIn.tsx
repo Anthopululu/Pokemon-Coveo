@@ -67,7 +67,7 @@ export default function AddLinkedIn() {
         if (data.profile) {
           let pending = JSON.parse(localStorage.getItem("pokedex-pending-linkedin") || "[]");
           pending = pending.filter((p: { documentId: string }) => p.documentId !== data.profile.documentId);
-          pending.push({ ...data.profile, addedAt: Date.now() });
+          pending.push({ ...data.profile, body: data.profile.data || "", addedAt: Date.now() });
           localStorage.setItem("pokedex-pending-linkedin", JSON.stringify(pending));
 
           try {

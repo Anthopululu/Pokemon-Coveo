@@ -1,6 +1,6 @@
 # Pokedex Search
 
-A Pokemon search engine built for the Coveo Pre-Sales Challenge. Indexes all 1025 Pokemon via the Push API, provides a custom search UI with Coveo Headless, and includes a RAG-powered AI chat assistant.
+Pokemon search engine I built for the Coveo Pre-Sales Challenge. 1025 Pokemon indexed via the Push API, a search UI with Coveo Headless, and a chat that uses Passage Retrieval + Groq to answer questions about Pokemon.
 
 Live at [pokedexcoveo.com](https://pokedexcoveo.com)
 
@@ -8,30 +8,41 @@ Live at [pokedexcoveo.com](https://pokedexcoveo.com)
 
 ---
 
-## Features
+## Challenge coverage
 
-**Search engine**
-- Full-text + semantic search across 1025 Pokemon via Coveo Cloud
-- Faceted filtering by Type and Generation
-- Custom autocomplete (title-based, since Query Suggest ML needs traffic to train)
+### Essential (all done)
+
+- [x] Chose Headless over Atomic, wanted full control on the UI so it actually looks like a Pokedex
+- [x] Indexed pokemondb.net with a Push source. Wrote a scraper that pulls all 1025 Pokemon with their names, types, stats, abilities, images, etc. Only Pokemon pages, no moves or type pages
+- [x] Search page connected to the Coveo Cloud endpoint, search-as-you-type
+- [x] Type facet (multi-value, since a Pokemon can be Fire + Flying for example)
+- [x] Generation facet (Gen I through IX)
+- [x] Pokemon images show directly on the result cards
+
+### Intermediate (all done)
+
+- [x] Code hosted on GitHub
+- [x] App hosted on AWS EC2 with PM2 and Nginx
+
+### Advanced (all done)
+
+- [x] Coveo RGA is live. Ask something like "what is the strongest fire type pokemon?" and you get a generative answer with citations above the results
+- [x] Query Suggest ML model is active and trained. I also built a custom autocomplete on top that queries the Search API on each keystroke for matching Pokemon names
+- [x] Detail page for each Pokemon: image, type badges, stat bars (HP, Attack, Defense...), abilities, height/weight, description, and relevant passages from the index
+- [x] Presentation prepared separately
+
+### Bonus (done)
+
+- [x] Passage Retrieval API. I use it in two places: on the detail page to show relevant text about the Pokemon, and in the AI chat where I feed the top passages as context to the LLM so it answers from actual indexed data instead of making things up
+
+### Stuff I added on top of the challenge
+
+- A floating chat popup powered by Coveo RGA that generates answers from the indexed data, streams responses, and shows source citations
+- LinkedIn profile import: paste a LinkedIn URL, it scrapes the profile via Bright Data, pushes it to Coveo, and shows it as a Pokemon card in the search results. You can delete imported profiles too
+- Bearer token auth on the import/delete API routes
 - Sort by relevance, Pokedex number, or name
-- URL state sync for shareable searches
-- Spelling correction (try "drgaon type")
-
-**AI features**
-- Coveo RGA (Relevance Generative Answering) with citations
-- Floating RAG chat using Groq (Llama 3.3 70B) + Coveo Passage Retrieval for context
-- Streaming responses with conversation history
-
-**LinkedIn import**
-- Import real people from LinkedIn as Pokemon characters
-- Scraping via Bright Data, instant display via localStorage, indexed to Coveo
-- Delete and re-import cycle supported
-
-**UI**
-- Pokemon detail pages with stats, abilities, type-colored cards
-- Pokemon-themed loading animations (Pokeball wobble)
-- Responsive design with mobile facet drawer
+- Spelling correction ("drgaon" suggests "dragon")
+- URL state sync so you can share a filtered search
 
 ---
 
@@ -40,12 +51,12 @@ Live at [pokedexcoveo.com](https://pokedexcoveo.com)
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 14 (App Router) |
-| Search | Coveo Headless (14 controllers, 4 utilities, 2 action loaders) |
+| Search | Coveo Headless |
 | Indexing | Coveo Push API |
 | Scraping | Bright Data API |
-| AI chat | Groq API (Llama 3.3 70B) |
+| AI chat | Coveo RGA (buildGeneratedAnswer) |
 | Passages | Coveo Passage Retrieval API v3 |
-| Styling | Tailwind CSS + custom design system |
+| Styling | Tailwind CSS |
 | Hosting | AWS EC2, PM2, Nginx |
 
 ---
@@ -55,24 +66,24 @@ Live at [pokedexcoveo.com](https://pokedexcoveo.com)
 ```
 src/
 ├── app/
-│   ├── layout.tsx                    # Root layout (fonts, metadata)
-│   ├── page.tsx                      # Homepage — initializes Coveo, renders search UI
-│   ├── globals.css                   # Design system (CSS variables, gradients, animations)
-│   ├── pokemon/[name]/page.tsx       # Detail page — stats, abilities, type badge, passages
+│   ├── layout.tsx                    # root layout, fonts, metadata
+│   ├── page.tsx                      # homepage, initializes Coveo and renders search UI
+│   ├── globals.css                   # design tokens, gradients, animations
+│   ├── pokemon/[name]/page.tsx       # detail page with stats, abilities, passages
 │   └── api/
-│       ├── chat/route.ts             # POST — Groq chat proxy with SSE streaming
-│       └── linkedin/add/route.ts     # POST — Bright Data scrape + Coveo push
-│                                     # DELETE — remove document from Coveo index
+│       ├── chat/route.ts             # POST: chat endpoint (legacy, unused)
+│       └── linkedin/add/route.ts     # POST: Bright Data scrape + Coveo push
+│                                     # DELETE: remove document from Coveo index
 ├── components/
-│   ├── SearchWidgets.tsx             # All Coveo widgets: SearchBox, Facet, Pager, GenAI,
-│   │                                #   DidYouMean, RecentQueries, StaticFilter, PassageHighlights
+│   ├── SearchWidgets.tsx             # SearchBox, Facet, Pager, GenAI, DidYouMean,
+│   │                                #   RecentQueries, StaticFilter, PassageHighlights
 │   ├── ResultList.tsx                # Pokemon card grid + pending/deleted LinkedIn logic
-│   ├── AddLinkedIn.tsx               # Import button with Pokeball animation
-│   └── AIChatPopup.tsx               # Floating AI chat (Coveo context + Groq streaming)
+│   ├── AddLinkedIn.tsx               # import button with Pokeball animation
+│   └── AIChatPopup.tsx               # floating chat powered by Coveo RGA
 │
 └── lib/
-    └── coveo.ts                      # Coveo config, engine singleton, useCoveoController hook,
-                                      #   Passage Retrieval API, Pokemon type color maps
+    └── coveo.ts                      # config, engine singleton, useCoveoController hook,
+                                      #   Passage Retrieval, type color maps
 ```
 
 ---
@@ -83,13 +94,13 @@ src/
 
 - Node.js 18+
 - A Coveo Cloud organization with a Push source
-- API keys for Coveo, Bright Data (optional, for LinkedIn import), and Groq (optional, for AI chat)
+- API keys for Coveo, Bright Data (optional, for LinkedIn), and Groq (optional, for chat)
 
 ### Installation
 
 ```bash
-git clone https://github.com/Anthopululu/Pokemon-Challenge.git
-cd Pokemon-Challenge
+git clone https://github.com/Anthopululu/Pokemon-Coveo.git
+cd Pokemon-Coveo
 npm install
 ```
 
@@ -98,27 +109,27 @@ npm install
 Create `.env.local` at the project root:
 
 ```env
-# Coveo — search (client-side, exposed to browser)
+# Coveo search (client-side, exposed to browser)
 NEXT_PUBLIC_COVEO_ORG_ID=your-org-id
 NEXT_PUBLIC_COVEO_SEARCH_TOKEN=your-search-api-key
 
-# Coveo — Push API (server-side only)
+# Coveo Push API (server-side only)
 COVEO_ORG_ID=your-org-id
 COVEO_API_KEY=your-push-api-key
 COVEO_SOURCE_ID=your-push-source-id
 
-# Bright Data — LinkedIn scraping (server-side, optional)
+# Bright Data, for LinkedIn scraping (server-side, optional)
 BRIGHT_DATA_API_TOKEN=your-bright-data-token
 
-# Groq — AI chat (server-side, optional)
+# Groq, for AI chat (server-side, optional)
 GROQ_API_KEY=your-groq-api-key
 ```
 
-> The Push API key must be generated from the Push source page in the Coveo admin console. Manually created API keys with similar permissions won't work.
+The Push API key has to be generated from the Push source page in the Coveo admin console. Manually created API keys with similar permissions won't work (learned that the hard way).
 
 ### Authentication
 
-The LinkedIn import/delete endpoints are protected by a bearer token. Set `ADMIN_TOKEN` in `.env.local` (server-side) and `NEXT_PUBLIC_ADMIN_TOKEN` (client-side, same value) to enable it. If `ADMIN_TOKEN` is not set, the endpoints are open.
+The LinkedIn import/delete endpoints are protected by a bearer token. Set both `ADMIN_TOKEN` (server-side) and `NEXT_PUBLIC_ADMIN_TOKEN` (client-side, same value) in `.env.local`. If `ADMIN_TOKEN` is not set, the endpoints are open.
 
 ```env
 ADMIN_TOKEN=choose-a-strong-random-token
@@ -143,28 +154,26 @@ Create these fields in the Coveo admin (Content > Fields):
 ### Run locally
 
 ```bash
-npm run dev          # Development server at http://localhost:3000
-npm run build        # Production build
-npm run start        # Start production server
-npm run lint         # Run ESLint
+npm run dev          # dev server at http://localhost:3000
+npm run build        # production build
+npm run start        # start production server
+npm run lint         # ESLint
 ```
 
-### Index Pokemon data
+### Scrape and index Pokemon data
 
-The `data/pokemon.json` file contains all 1025 Pokemon scraped from pokemondb.net. To push them to your Coveo source, use the Push API:
+Two scripts in `scripts/`:
 
 ```bash
-# Example: push a single document
-curl -X PUT "https://api.cloud.coveo.com/push/v1/organizations/$COVEO_ORG_ID/sources/$COVEO_SOURCE_ID/documents?documentId=https://pokemondb.net/pokedex/pikachu" \
-  -H "Authorization: Bearer $COVEO_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Pikachu","data":"...","pokemontype":["Electric"],"pokemonnumber":25}'
+npx tsx scripts/scrape-pokemon.ts    # scrape pokemondb.net -> data/pokemon.json
+npx tsx scripts/push-to-coveo.ts     # push data/pokemon.json -> Coveo
 ```
 
-### Deploy to EC2
+The scraper goes through all 1025 Pokemon pages on pokemondb.net, parses the HTML with cheerio, and saves everything (name, types, stats, abilities, image, etc.) to `data/pokemon.json`. The push script reads that file and sends each document to Coveo via the Push API.
+
+### Deploy
 
 ```bash
-# On the server
 git pull
 npm run build
 pm2 restart pokemon-coveo
@@ -172,59 +181,54 @@ pm2 restart pokemon-coveo
 
 ---
 
-## Coveo Headless usage
+## How Headless is used
 
-The app uses Coveo Headless as its search state layer. Each controller is a live object that subscribes to the engine and auto-updates when search state changes. All controllers share a single engine singleton (except the detail page and chat, which each create their own isolated instance).
+The app uses Coveo Headless for all search state management. Each controller subscribes to a shared engine singleton and auto-updates on state changes. The detail page and chat create their own isolated engines so they don't mess with the main search.
 
-**Controllers used:** `buildSearchEngine`, `buildSearchBox`, `buildResultList`, `buildInteractiveResult`, `buildQuerySummary`, `buildFacet`, `buildStaticFilter`, `buildSort`, `buildPager`, `buildResultsPerPage`, `buildGeneratedAnswer`, `buildDidYouMean`, `buildRecentQueriesList`, `buildNotifyTrigger`, `buildUrlManager`
+Controllers: `buildSearchEngine`, `buildSearchBox`, `buildResultList`, `buildInteractiveResult`, `buildQuerySummary`, `buildFacet`, `buildStaticFilter`, `buildSort`, `buildPager`, `buildResultsPerPage`, `buildGeneratedAnswer`, `buildDidYouMean`, `buildRecentQueriesList`, `buildNotifyTrigger`, `buildUrlManager`
 
-**Action loaders:** `loadSearchActions`, `loadSearchAnalyticsActions`, `loadQueryActions`
+Action loaders: `loadSearchActions`, `loadSearchAnalyticsActions`, `loadQueryActions`
 
-**Direct REST:** Passage Retrieval API (`/rest/search/v3/passages/retrieve`) — no Headless controller exists for this endpoint.
+For Passage Retrieval I call the REST endpoint directly (`/rest/search/v3/passages/retrieve`) since there's no Headless controller for it.
 
-The `useCoveoController` hook in `lib/coveo.ts` handles the subscribe/unsubscribe pattern so components stay in sync with the engine without boilerplate.
+The `useCoveoController` hook in `lib/coveo.ts` handles subscribe/unsubscribe so components stay in sync without boilerplate.
 
-### Pipeline configuration
+### Pipeline config
 
-A QRE (Query Ranking Expression) boosts `@pokemonnumber<200` by +7000, giving popular Gen 1/2 Pokemon priority in results. Without it, semantic search ranks Pikipek close to Pikachu.
+I have a QRE that boosts `@pokemonnumber<200` by +7000 so popular Gen 1/2 Pokemon show up first. Without it, searching "Pikachu" also ranks Pikipek pretty high because of semantic similarity.
 
-Four ML models are active: Semantic Encoder, RGA, Query Suggestions (empty — needs traffic), and ART (Automatic Relevance Tuning, fed by click tracking via `buildInteractiveResult`).
+Four ML models are active: Semantic Encoder, RGA, Query Suggestions, and ART (Automatic Relevance Tuning, fed by click analytics from `buildInteractiveResult`).
 
 ---
 
-## Design decisions
+## Why I made certain choices
 
-**Headless over Atomic** — Full control over UI. Atomic provides pre-built components but limits customization. With Headless, the app looks like a Pokedex, not a generic search page.
+I went with Headless instead of Atomic because I wanted the UI to look like an actual Pokedex, not a default search interface. More work but the result is way more custom.
 
-**Push API over Web Crawler** — More setup work but cleaner metadata. Each Pokemon has typed fields (multi-value types, integer Pokedex number, image URL) instead of raw HTML extraction.
+Push API instead of the Web Crawler because I get cleaner metadata that way. Each Pokemon has typed fields (multi-value types, integer Pokedex number, image URL) instead of having to extract stuff from raw HTML.
 
-**Custom autocomplete** — The Query Suggest ML model needs real traffic to train. Since this is a demo app, I built title-based suggestions that query the Coveo Search API directly.
+I also added a custom autocomplete that queries the Search API directly on each keystroke and shows matching titles, on top of the Query Suggest model.
 
-**localStorage for instant display** — LinkedIn imports take ~15s to index in Coveo. Pending profiles are stored in localStorage and shown immediately as "Just added" cards, then replaced by real Coveo results once indexed.
-
-**Separate engines** — The detail page and chat each create their own `buildSearchEngine` instance so they don't interfere with the main search state.
+LinkedIn imports take about 15 seconds to index in Coveo, so I store pending profiles in localStorage and show them as "Just added" cards immediately. Once Coveo finishes indexing, the real results replace them.
 
 ---
 
 ## Testing
 
 ```bash
-npm test              # Run all tests once
-npm run test:watch    # Run in watch mode
+npm test              # run all tests
+npm run test:watch    # watch mode
 ```
 
-Tests cover:
-- LinkedIn API route: auth (401 for missing/wrong token), validation (400 for invalid URL), Coveo delete integration
-- Chat API route: Groq proxy, streaming response format, conversation history, error handling
+Tests cover the LinkedIn API route (auth, validation, Coveo delete) and the chat API route (Groq proxy, streaming, conversation history, error handling).
 
 ---
 
 ## Known limitations
 
-- Query Suggest ML model is empty (needs real search traffic to train)
-- LinkedIn import depends on Bright Data availability and rate limits
-- The 2-minute localStorage TTL for deleted/pending profiles is a workaround — ideally Coveo indexing would be faster
-- Admin token is exposed client-side (`NEXT_PUBLIC_ADMIN_TOKEN`) — sufficient for a demo but not for production
+- LinkedIn import depends on Bright Data availability
+- The 2-minute localStorage TTL for deleted/pending profiles is a workaround, ideally Coveo indexing would be faster
+- Admin token is exposed client-side (`NEXT_PUBLIC_ADMIN_TOKEN`), fine for a demo but not for production
 
 ---
 

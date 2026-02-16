@@ -3,16 +3,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   buildSearchEngine,
-  buildResultList,
+  buildGeneratedAnswer,
   loadSearchActions,
   loadQueryActions,
   loadSearchAnalyticsActions,
 } from "@coveo/headless";
-import { coveoConfig, retrievePassages } from "@/lib/coveo";
+import { coveoConfig } from "@/lib/coveo";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  citations?: { title: string; uri: string }[];
   isStreaming?: boolean;
 }
 
@@ -58,6 +59,7 @@ export default function AIChatPopup() {
     setMessages((prev) => [...prev, { role: "assistant", content: "", isStreaming: true }]);
 
     try {
+      // create a fresh engine for each question
       const engine = buildSearchEngine({
         configuration: {
           organizationId: coveoConfig.organizationId,
@@ -66,150 +68,71 @@ export default function AIChatPopup() {
         },
       });
 
-      const resultList = buildResultList(engine, {
-        options: {
-          fieldsToInclude: ["pokemontype", "pokemonimage", "pokemonnumber", "pokemonspecies"],
-        },
-      });
+      const generatedAnswer = buildGeneratedAnswer(engine);
 
       const { updateQuery } = loadQueryActions(engine);
       const { executeSearch } = loadSearchActions(engine);
       const { logSearchFromLink } = loadSearchAnalyticsActions(engine);
 
+      // subscribe to the generated answer state to stream it
+      let lastAnswer = "";
+      let finalCitations: { title: string; uri: string }[] = [];
+
+      const unsub = generatedAnswer.subscribe(() => {
+        const state = generatedAnswer.state;
+        if (state.answer && state.answer !== lastAnswer) {
+          lastAnswer = state.answer;
+          finalCitations = (state.citations || []).map((c) => ({
+            title: c.title,
+            uri: c.clickUri || c.uri,
+          }));
+          setMessages((prev) => {
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last.isStreaming || (last.role === "assistant" && updated.length === prev.length)) {
+              last.content = lastAnswer;
+              last.citations = finalCitations.length > 0 ? finalCitations : undefined;
+            }
+            return [...updated];
+          });
+        }
+      });
+
+      // execute the search (triggers RGA)
       engine.dispatch(updateQuery({ q: query }));
       engine.dispatch(executeSearch(logSearchFromLink()));
 
-      const passagePromise = retrievePassages(query);
-
+      // wait for RGA to finish streaming
       await new Promise<void>((resolve) => {
-        const unsub = resultList.subscribe(() => {
-          if (!resultList.state.isLoading) {
-            unsub();
+        const check = () => {
+          const state = generatedAnswer.state;
+          if (!state.isStreaming && (state.answer || state.error)) {
             resolve();
+          } else {
+            setTimeout(check, 200);
           }
-        });
-        setTimeout(() => { unsub(); resolve(); }, 8000);
+        };
+        setTimeout(check, 500);
+        // timeout after 30s
+        setTimeout(resolve, 30000);
       });
 
-      const passages = await passagePromise;
+      unsub();
 
-      // Filter out deleted profiles
-      const deletedTitles = new Set<string>();
-      try {
-        const deletedRaw = JSON.parse(localStorage.getItem("pokedex-deleted-linkedin") || "[]");
-        const now = Date.now();
-        for (const entry of deletedRaw) {
-          if (typeof entry === "string") continue;
-          if (entry.title && (now - entry.at) < 120000) {
-            deletedTitles.add(entry.title.toLowerCase());
-          }
-        }
-      } catch {}
-
-      const allResults = resultList.state.results.filter(
-        (r) => !deletedTitles.has(r.title.toLowerCase())
-      );
-
-      const contextParts: string[] = [];
-      for (const r of allResults.slice(0, 4)) {
-        const raw = r.raw as Record<string, unknown>;
-        const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
-        const number = (raw.pokemonnumber as number) || 0;
-        const species = (raw.pokemonspecies as string) || "";
-        contextParts.push(`- ${r.title} (#${number}): ${types.join("/")} type. Species: ${species || "Unknown"}.`);
-        if (r.excerpt) {
-          contextParts.push(`[${r.title}]: ${r.excerpt}`);
-        }
-      }
-      if (passages.length > 0) {
-        contextParts.push("\nPassage retrieval results:");
-        for (const p of passages) {
-          contextParts.push(`[${p.document.title}]: ${p.text}`);
-        }
-      }
-
-      // Include recently added LinkedIn profiles from localStorage
-      try {
-        const pending = JSON.parse(localStorage.getItem("pokedex-pending-linkedin") || "[]");
-        const queryWords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
-        for (const p of pending) {
-          const nameLower = (p.title || "").toLowerCase();
-          const nameWords = nameLower.split(/\s+/);
-          const matches = queryWords.some((w: string) => nameWords.some((nw: string) => nw.includes(w) || w.includes(nw)));
-          if (matches) {
-            contextParts.push(`\nLinkedIn profile recently added to Pokedex:`);
-            contextParts.push(`- ${p.title}: Type: ${(p.pokemontype || []).join("/")}. Species/Role: ${p.pokemonspecies || "Unknown"}. Generation: ${p.pokemongeneration || "Unknown"}. This person was imported from LinkedIn.`);
-          }
-        }
-      } catch {}
-
-      const context = contextParts.join("\n");
-
-      let finalAnswer = "";
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query,
-            context,
-            history: messages.filter((m) => !m.isStreaming).slice(1, -1),
-          }),
-        });
-
-        if (res.ok && res.body) {
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
-            for (const line of lines) {
-              if (line.startsWith("data: ") && line !== "data: [DONE]") {
-                try {
-                  const parsed = JSON.parse(line.slice(6));
-                  const token = parsed.choices?.[0]?.delta?.content || "";
-                  finalAnswer += token;
-                  setMessages((prev) => {
-                    const updated = [...prev];
-                    const last = updated[updated.length - 1];
-                    if (last.isStreaming) last.content = finalAnswer;
-                    return [...updated];
-                  });
-                } catch {}
-              }
-            }
-          }
-        }
-      } catch {}
-
-      if (!finalAnswer) {
-        const results = resultList.state.results;
-        if (results.length > 0) {
-          const raw = results[0].raw as Record<string, unknown>;
-          const types = (Array.isArray(raw.pokemontype) ? raw.pokemontype : [raw.pokemontype].filter(Boolean)) as string[];
-          const number = (raw.pokemonnumber as number) || 0;
-          const species = (raw.pokemonspecies as string) || "";
-          finalAnswer = `${results[0].title} (#${number}) is a ${types.join("/")} type`;
-          if (species) finalAnswer += ` (${species})`;
-          finalAnswer += ".";
-        } else {
-          finalAnswer = "I couldn't find any Pokemon matching that. Try a specific name or type!";
-        }
+      // if RGA returned nothing, fall back to a simple message
+      if (!lastAnswer) {
+        lastAnswer = "I couldn't find a good answer for that. Try asking about a specific Pokemon or type!";
       }
 
       setMessages((prev) => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
-        if (last.isStreaming || last.role === "assistant") {
-          last.content = finalAnswer;
-          last.isStreaming = false;
-        }
+        last.content = lastAnswer;
+        last.isStreaming = false;
+        last.citations = finalCitations.length > 0 ? finalCitations : undefined;
         return [...updated];
       });
+
     } catch {
       setMessages((prev) => {
         const updated = [...prev];
@@ -260,6 +183,7 @@ export default function AIChatPopup() {
             </div>
             <div>
               <h3 className="text-sm font-syne font-bold text-dex-text">Pokedex AI</h3>
+              <p className="text-[10px] font-mono text-dex-text-muted">Powered by Coveo RGA</p>
             </div>
             <div className="ml-auto flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -295,6 +219,21 @@ export default function AIChatPopup() {
                       <span className="whitespace-pre-line">{msg.content}</span>
                     )}
                   </div>
+                  {msg.citations && msg.citations.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.citations.map((c, j) => (
+                        <a
+                          key={j}
+                          href={c.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-mono text-dex-accent hover:text-dex-accent-hover bg-dex-accent-subtle px-2 py-0.5 rounded-full border border-dex-accent/20 transition-colors"
+                        >
+                          {c.title}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

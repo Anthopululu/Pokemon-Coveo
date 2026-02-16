@@ -70,6 +70,20 @@ async function fetchSnapshot(snapshotId: string): Promise<Record<string, unknown
   return Array.isArray(data) ? data[0] : data;
 }
 
+function generateInitialsAvatar(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parts[0].substring(0, 2).toUpperCase();
+
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">' +
+    '<rect width="200" height="200" rx="20" fill="#0077B5"/>' +
+    '<text x="100" y="100" dominant-baseline="central" text-anchor="middle" ' +
+    'fill="white" font-family="Arial,sans-serif" font-size="80" font-weight="bold">' +
+    initials + '</text></svg>';
+  return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
 function mapProfileToCoveo(profile: Record<string, unknown>, linkedinUrl: string) {
   const name = (profile.name as string) || (profile.full_name as string) || "Unknown";
   const position = (profile.position as string) || "";
@@ -80,8 +94,7 @@ function mapProfileToCoveo(profile: Record<string, unknown>, linkedinUrl: string
 
   const isDefaultAvatar = profile.default_avatar === true;
   const avatar = (profile.avatar as string) || "";
-  const bannerImage = (profile.banner_image as string) || "";
-  const profilePic = (!isDefaultAvatar && avatar) ? avatar : bannerImage;
+  const profilePic = (!isDefaultAvatar && avatar) ? avatar : generateInitialsAvatar(name);
 
   const experience = profile.experience;
 
@@ -243,6 +256,7 @@ export async function POST(req: NextRequest) {
         pokemongeneration: coveoDoc.pokemongeneration,
         pokemoncategory: coveoDoc.pokemoncategory,
         pokemonnumber: coveoDoc.pokemonnumber,
+        data: coveoDoc.data,
       },
     });
   } catch (error) {
