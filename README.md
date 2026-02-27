@@ -145,6 +145,21 @@ Create these in Content > Fields:
 | `pokemonstats` | String | No | No |
 | `pokemoncategory` | String | No | No |
 
+### API keys
+
+I created 6 API keys during development, each for a specific need:
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| **push** | Push API | Index and delete documents from the app's server-side routes |
+| **Pokemon Search** | Search pages | Client-side search token used by the frontend |
+| **analytic** | Usage analytics | Click analytics for ART model training |
+| **Machine learning** | Custom | Initial setup of ML models (Semantic Encoder, QS, RGA) |
+| **PokemonChallengeSource** | Push API (Source) | Auto-generated with the Push source, used for initial indexing |
+| **Pokemon Admin Key** | Custom | Org-level configuration during setup |
+
+In production, only **2 keys are active**: `push` (server-side indexing) and `Pokemon Search` (client-side search). The others were needed during build but can be cleaned up once the app is live.
+
 ### Pipeline config
 
 One QRE that boosts `@pokemonnumber<200` by +7000 so Gen 1/2 Pokemon rank higher. Without it, "Pikachu" also pushes Pikipek up because of semantic similarity. Four ML models active: Semantic Encoder, RGA, Query Suggestions, ART.
