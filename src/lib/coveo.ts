@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { buildSearchEngine, SearchEngine } from "@coveo/headless";
+import { buildSearchEngine, buildGeneratedAnswer, SearchEngine } from "@coveo/headless";
 
 // ── Config ──────────────────────────────────────────────────────────
 export const coveoConfig = {
@@ -22,6 +22,10 @@ export function getSearchEngine(): SearchEngine {
       },
     },
   });
+
+  // Pre-register generatedAnswer slice so pipelineRuleParameters
+  // are included in the very first search request
+  buildGeneratedAnswer(engineInstance);
 
   return engineInstance;
 }
