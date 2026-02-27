@@ -4,7 +4,7 @@
 
 ---
 
-## Project Structure (12 files)
+## Project Structure (10 files)
 
 ```
 src/
@@ -15,14 +15,13 @@ src/
 │   ├── icon.svg                      #   Favicon
 │   ├── pokemon/[name]/page.tsx       #   Pokemon detail page
 │   └── api/
-│       ├── chat/route.ts             #   AI chat endpoint (Groq/Llama)
 │       └── linkedin/add/route.ts     #   LinkedIn import + delete
 │
 ├── components/                       # React UI components
 │   ├── SearchWidgets.tsx             #   ALL search widgets (SearchBox, Facet, Pager, GenAI, etc.)
 │   ├── ResultList.tsx                #   Pokemon cards grid + pending/deleted logic
 │   ├── AddLinkedIn.tsx               #   "Catch Pokemon" import button
-│   └── AIChatPopup.tsx               #   Floating AI chat widget
+│   └── AIChatPopup.tsx               #   Floating AI chat (Coveo RGA)
 │
 └── lib/
     └── coveo.ts                      #   Coveo engine + passage retrieval + type colors
@@ -51,10 +50,10 @@ src/
           │                    ▲                │ route.ts (API)      │
           └────────────────────┘                │ Bright Data scrape  │
                                                 │ → Coveo Push API    │
-                                                └─────────────────────┘
-    ┌──────────────────────┐
+    ┌──────────────────────┐                    └─────────────────────┘
     │   AIChatPopup        │
-    │ Coveo search + Groq  │──── POST /api/chat ──→ Groq (Llama 3.3 70B)
+    │ Own Coveo engine     │──── buildGeneratedAnswer ──→ Coveo RGA
+    │ per question         │     (streamed, with citations)
     └──────────────────────┘
 ```
 
@@ -96,15 +95,16 @@ User pastes URL → AddLinkedIn → /api/linkedin/add → Bright Data → Coveo
 ### 3. AI Chat Flow
 
 ```
-User question → AIChatPopup → Coveo search (context)
-                             → Passage retrieval (context)
-                             → /api/chat → Groq API → streamed response
+User question → AIChatPopup → creates fresh Coveo engine
+                             → executeSearch (triggers RGA)
+                             → buildGeneratedAnswer streams response
 ```
 
-1. `AIChatPopup` creates a separate Coveo engine per question
-2. Gets top 4 results + passages as context
-3. Sends to `/api/chat` → Groq (Llama 3.3 70B) with streaming
-4. Response streams back token-by-token
+1. `AIChatPopup` creates a **separate Coveo engine** for each question
+2. Dispatches a search query via `loadQueryActions` + `executeSearch`
+3. `buildGeneratedAnswer` subscribes to the engine and streams the RGA response
+4. Citations are extracted from the generated answer state
+5. No external API call needed — everything runs through Coveo
 
 ---
 
@@ -122,7 +122,6 @@ User question → AIChatPopup → Coveo search (context)
 
 | File | Endpoint | Role |
 |------|----------|------|
-| `api/chat/route.ts` | `POST /api/chat` | Sends query + context to Groq, streams response. |
 | `api/linkedin/add/route.ts` | `POST` | Scrapes LinkedIn via Bright Data, pushes to Coveo. |
 | | `DELETE` | Removes a document from Coveo index. |
 
@@ -133,7 +132,7 @@ User question → AIChatPopup → Coveo search (context)
 | `SearchWidgets.tsx` | `SearchBox`, `Facet`, `MobileFacets`, `Pager`, `GenAIAnswer`, `DidYouMean`, `NotifyTrigger`, `RecentQueries`, `StaticFilter`, `SearchUrlManager`, `PassageHighlights` | All Coveo search UI widgets in one file. |
 | `ResultList.tsx` | `ResultList` | Pokemon cards grid. Handles pending profiles (localStorage) and deleted profiles. |
 | `AddLinkedIn.tsx` | `AddLinkedIn` | "Catch Pokemon" button. Pokeball animation. Saves to localStorage on success. |
-| `AIChatPopup.tsx` | `AIChatPopup` | Floating AI chat. Searches Coveo for context, streams Groq responses. |
+| `AIChatPopup.tsx` | `AIChatPopup` | Floating AI chat. Creates a Coveo engine per question, uses RGA for grounded answers with citations. |
 
 ### Library
 
@@ -148,10 +147,10 @@ User question → AIChatPopup → Coveo search (context)
 | Tech | Role | Where |
 |------|------|-------|
 | **Next.js 14** | Framework + routing + API routes | Everything |
-| **Coveo Headless** | Search engine controllers (client) | `coveo.ts`, `SearchWidgets`, `ResultList` |
+| **Coveo Headless** | Search engine controllers (client) | `coveo.ts`, `SearchWidgets`, `ResultList`, `AIChatPopup` |
+| **Coveo RGA** | AI-generated answers with citations | `AIChatPopup`, `SearchWidgets` (GenAIAnswer) |
 | **Coveo Push API** | Index/delete documents (server) | `api/linkedin/add` |
 | **Bright Data** | LinkedIn profile scraping | `api/linkedin/add` |
-| **Groq** (Llama 3.3 70B) | AI chat | `api/chat` |
 | **localStorage** | Instant pending/deleted state | `ResultList`, `AddLinkedIn`, `SearchBox` |
 
 ---
@@ -174,5 +173,4 @@ COVEO_ORG_ID=...                   # Coveo org (server-side)
 COVEO_API_KEY=...                  # Coveo Push API key (server-side)
 COVEO_SOURCE_ID=...                # Coveo source ID (server-side)
 BRIGHT_DATA_API_TOKEN=...         # Bright Data scraping API
-GROQ_API_KEY=...                   # Groq API key
 ```

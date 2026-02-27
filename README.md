@@ -75,7 +75,6 @@ src/
 │   ├── page.tsx                      # search page — initializes Coveo engine
 │   ├── pokemon/[name]/page.tsx       # detail page — stats, passages, type badges
 │   └── api/
-│       ├── chat/route.ts             # AI chat endpoint
 │       └── linkedin/add/route.ts     # Bright Data scrape + Coveo push/delete
 ├── components/
 │   ├── SearchWidgets.tsx             # SearchBox, Facet, Pager, RGA, DidYouMean...
@@ -172,7 +171,7 @@ For Passage Retrieval I hit the REST endpoint directly (`/rest/search/v3/passage
 npm test
 ```
 
-Covers the LinkedIn API route (auth, validation, push, delete) and the chat endpoint (streaming, history, error handling).
+Covers the LinkedIn API route (auth, validation, push, delete).
 
 ---
 
