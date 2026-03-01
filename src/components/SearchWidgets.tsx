@@ -73,9 +73,7 @@ export function GenAIAnswer() {
   }, [state.error, genAnswer]);
 
   if (!state.isVisible) return null;
-
-  // Show loading state while RGA is generating
-  if (!state.answer && !state.isStreaming && !state.isLoading) return null;
+  if (!state.answer && !state.isStreaming) return null;
 
   return (
     <div className="mb-6 bg-dex-surface border border-dex-border/60 rounded-xl p-5 shadow-sm relative overflow-hidden">
@@ -90,7 +88,7 @@ export function GenAIAnswer() {
           </svg>
         </div>
         <span className="text-sm font-syne font-bold text-dex-text">AI Answer</span>
-        {(state.isStreaming || state.isLoading) && (
+        {state.isStreaming && (
           <span className="text-xs text-dex-accent font-mono animate-pulse">Generating...</span>
         )}
         <span className="ml-auto text-[9px] font-mono text-dex-text-muted uppercase tracking-wider">Coveo RGA</span>
