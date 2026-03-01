@@ -199,6 +199,7 @@ Running on EC2 behind Nginx with PM2 for process management.
 - LinkedIn import takes ~15s to index in Coveo, so I use localStorage for instant feedback. It's a workaround, not ideal
 - Admin token is exposed client-side, fine for a demo but not for production
 - Bright Data availability can be flaky for LinkedIn scraping
+- Scraper relies on pokemondb.net's HTML structure (CSS selectors). If they redesign their pages, the scraper breaks with no fallback
 
 ---
 
