@@ -37,6 +37,8 @@ export function useCoveoController<S>(controller: { state: S; subscribe: (cb: ()
 
   useEffect(() => {
     const unsub = ref.current.subscribe(() => setState(ref.current.state));
+    // Re-sync in case state changed between initial render and subscription
+    setState(ref.current.state);
     return unsub;
   }, []);
 

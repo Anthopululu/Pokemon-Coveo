@@ -59,9 +59,23 @@ export function DidYouMean() {
 export function GenAIAnswer() {
   const genAnswer = useRef(buildGeneratedAnswer(getSearchEngine())).current;
   const { state } = useCoveoController(genAnswer);
+  const retriedRef = useRef(false);
+
+  // Retry once if RGA fails or returns an error
+  useEffect(() => {
+    if (state.error && !retriedRef.current) {
+      retriedRef.current = true;
+      genAnswer.retry();
+    }
+    if (!state.error) {
+      retriedRef.current = false;
+    }
+  }, [state.error, genAnswer]);
 
   if (!state.isVisible) return null;
-  if (!state.answer && !state.isStreaming) return null;
+
+  // Show loading state while RGA is generating
+  if (!state.answer && !state.isStreaming && !state.isLoading) return null;
 
   return (
     <div className="mb-6 bg-dex-surface border border-dex-border/60 rounded-xl p-5 shadow-sm relative overflow-hidden">
@@ -76,7 +90,7 @@ export function GenAIAnswer() {
           </svg>
         </div>
         <span className="text-sm font-syne font-bold text-dex-text">AI Answer</span>
-        {state.isStreaming && (
+        {(state.isStreaming || state.isLoading) && (
           <span className="text-xs text-dex-accent font-mono animate-pulse">Generating...</span>
         )}
         <span className="ml-auto text-[9px] font-mono text-dex-text-muted uppercase tracking-wider">Coveo RGA</span>
