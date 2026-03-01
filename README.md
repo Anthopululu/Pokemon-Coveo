@@ -2,7 +2,7 @@
 
 Pokemon search engine I built for the Coveo SE Challenge. 1025 Pokemon indexed through the Push API, a custom Pokedex UI on Coveo Headless, and an AI chat grounded on real indexed data.
 
-**[pokedexcoveo.com](https://pokedexcoveo.com)** · **[GitHub repo](https://github.com/Anthopululu/Pokemon-Coveo)**
+**Live demo: [https://pokedexcoveo.com](https://pokedexcoveo.com)**
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-black) ![Coveo](https://img.shields.io/badge/Coveo-Headless-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-38bdf8)
 
